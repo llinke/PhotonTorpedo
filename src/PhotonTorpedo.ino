@@ -17,29 +17,53 @@ SYSTEM_MODE(AUTOMATIC);
 
 void StickComplete();
 
-// Define some NeoPatterns for the two rings and the stick
-//  as well as some completion routines
+// Define some NeoPatterns for the stick as well as some completion routines
 NeoPatterns Stick = NeoPatterns(PIXEL_COUNT, PIXEL_PIN, PIXEL_TYPE, &StickComplete);
+//NeoPatterns Stick = new NeoPatterns();
+bool started = false;
 
 // Initialize everything and prepare to start
 void setup()
 {
-    //Serial.begin(115200);
+  Particle.function("initStrip",initStrip);
+  Particle.function("setRainbow",setRainbow);
+  //Particle.function("setScanner",setScanner);
+  Particle.function("setFade",setFade);
+}
 
-    //pinMode(8, INPUT_PULLUP);
-    //pinMode(9, INPUT_PULLUP);
+int initStrip(String args)
+{
+  //Stick = NeoPatterns(pixelCount, PIXEL_PIN, PIXEL_TYPE, &StickComplete);
+  // Initialize all the pixelStrips
+  Stick.begin();
+  started = true;
+  return 0;
+}
 
-    // Initialize all the pixelStrips
-    Stick.begin();
+int setRainbow(String args)
+{
+  Stick.RainbowCycle(3);
+  return 0;
+}
 
-    // Kick off a pattern
-    Stick.RainbowCycle(3);
+int setScanner(String args)
+{
+  Stick.Scanner((uint32_t)0x00204080, 3);
+  return 0;
+}
+
+int setFade(String args)
+{
+  Stick.Fade((uint32_t)0x00204080, (uint32_t)0x00080402, (uint16_t)8, 3);
+  return 0;
 }
 
 // Main loop
 void loop()
 {
-    Stick.Update();
+  if (!started) return;
+
+  Stick.Update();
 }
 
 //------------------------------------------------------------
@@ -47,6 +71,5 @@ void loop()
 //------------------------------------------------------------
 void StickComplete()
 {
-    // Random color change for next scan
     Stick.Color1 = Stick.Wheel(random(255));
 }
