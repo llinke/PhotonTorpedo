@@ -1,9 +1,9 @@
 /*
- * Project PhotonTorpedo
- * Description:
- * Author:
- * Date:
- */
+* Project PhotonTorpedo
+* Description:
+* Author:
+* Date:
+*/
 
 #include "neopixel.h"
 #include "NeoPatterns.cpp"
@@ -15,61 +15,67 @@ SYSTEM_MODE(AUTOMATIC);
 #define PIXEL_COUNT 32
 #define PIXEL_TYPE WS2812B
 
-void StickComplete();
-
-// Define some NeoPatterns for the stick as well as some completion routines
-NeoPatterns Stick = NeoPatterns(PIXEL_COUNT, PIXEL_PIN, PIXEL_TYPE, &StickComplete);
-//NeoPatterns Stick = new NeoPatterns();
+// Define some NeoPatterns for the lightstrip as well as some completion routines
+Adafruit_NeoPixel lightstrip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, PIXEL_TYPE);
+NeoPatterns *neostrip;
 bool started = false;
+int pixelCount = PIXEL_COUNT;
 
 // Initialize everything and prepare to start
 void setup()
 {
-  Particle.function("initStrip",initStrip);
-  Particle.function("setRainbow",setRainbow);
-  //Particle.function("setScanner",setScanner);
-  Particle.function("setFade",setFade);
+	Particle.function("initStrip",initStrip);
+	Particle.function("stopStrip",stopStrip);
+	Particle.function("setRainbow",setRainbow);
+	Particle.function("setWipe",setWipe);
+	Particle.function("setFade",setFade);
+
+	Particle.variable("countLeds", pixelCount);
+	Particle.variable("isStarted", started);
 }
 
 int initStrip(String args)
 {
-  //Stick = NeoPatterns(pixelCount, PIXEL_PIN, PIXEL_TYPE, &StickComplete);
-  // Initialize all the pixelStrips
-  Stick.begin();
-  started = true;
-  return 0;
+	neostrip = new NeoPatterns((&lightstrip));
+	lightstrip.setBrightness(64);
+	lightstrip.begin();
+	lightstrip.clear();
+	lightstrip.show();
+	started = true;
+	return lightstrip.numPixels();
+}
+
+int stopStrip(String args)
+{
+	started = false;
+	lightstrip.clear();
+	lightstrip.show();
+	return 0;
 }
 
 int setRainbow(String args)
 {
-  Stick.RainbowCycle(3);
-  return 0;
+	neostrip->RainbowCycle(10);
+	return 0;
 }
 
-int setScanner(String args)
+int setWipe(String args)
 {
-  Stick.Scanner((uint32_t)0x00204080, 3);
-  return 0;
+	neostrip->ColorWipe((uint32_t)0x0000ff00,(uint32_t)0x00007f7f, 50);
+	return 0;
 }
 
 int setFade(String args)
 {
-  Stick.Fade((uint32_t)0x00204080, (uint32_t)0x00080402, (uint16_t)8, 3);
-  return 0;
+	neostrip->Fade((uint32_t)0x000000ff, (uint32_t)0x00ff0000, (uint16_t)64, 10);
+	return 0;
 }
 
 // Main loop
 void loop()
 {
-  if (!started) return;
+	if (!started) return;
 
-  Stick.Update();
-}
-
-//------------------------------------------------------------
-//Completion Routines - get called on completion of a pattern
-//------------------------------------------------------------
-void StickComplete()
-{
-    Stick.Color1 = Stick.Wheel(random(255));
+	neostrip->Update();
+	pixelCount = lightstrip.numPixels();
 }
