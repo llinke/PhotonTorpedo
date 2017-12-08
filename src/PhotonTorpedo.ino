@@ -29,6 +29,7 @@ void setup()
 {
 	Particle.function("initStrip", initStrip);
 	Particle.function("stopStrip", stopStrip);
+
 	Particle.function("setStatic", setStatic);
 	Particle.function("setRainbow", setRainbow);
 	Particle.function("setWipe", setWipe);
@@ -47,6 +48,7 @@ int initStrip(String args)
 	pixelCount = lightstrip.numPixels();
 	//neostrip = new NeoPatterns((&lightstrip));
 	neoGroup = new NeoGroup((&lightstrip), 0, 0, pixelCount - 1);
+	//neoGroup = new NeoGroup((&lightstrip), 0, 0 + 4, pixelCount - 1 - 4);
 	started = true;
 	return pixelCount;
 }

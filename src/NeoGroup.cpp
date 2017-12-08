@@ -204,7 +204,7 @@ class NeoGroup
 	// Update the Rainbow Cycle Pattern
 	void RainbowUpdate()
 	{
-		for (int i = LedFirst; i < LedLast; i++)
+		for (int i = LedFirst; i <= LedLast; i++)
 		{
 			int i2 = i - LedFirst;
 			strip->setPixelColor(i, GetRainbowColor(((i2 * 256 / LedCount) + (255 - Index)) & 255));
@@ -218,7 +218,7 @@ class NeoGroup
 	{
 		int colNr = (int)abs(Index / LedCount);
 		uint16_t indexNew = Index - (colNr * LedCount);
-		strip->setPixelColor(indexNew, Colors.at(colNr));
+		strip->setPixelColor(LedFirst + indexNew, Colors.at(colNr));
 		strip->show();
 		Increment();
 	}
@@ -248,7 +248,7 @@ class NeoGroup
 		uint8_t blue = ((Blue(color1) * (fadeLength - indexNew)) + (Blue(color2) * indexNew)) / fadeLength;
 		uint32_t newColor = strip->Color(red, green, blue);
 
-		for (int i = LedFirst; i < LedLast; i++)
+		for (int i = LedFirst; i <= LedLast; i++)
 		{
 			strip->setPixelColor(i, newColor);
 		}
@@ -260,7 +260,7 @@ class NeoGroup
 	void StaticUpdate()
 	{
 		uint32_t newColor = Colors.at(0);
-		for (int i = LedFirst; i < LedLast; i++)
+		for (int i = LedFirst; i <= LedLast; i++)
 		{
 			strip->setPixelColor(i, newColor);
 		}
