@@ -20,7 +20,9 @@ SYSTEM_MODE(AUTOMATIC);
 // Define some NeoPatterns for the lightstrip as well as some completion routines
 Adafruit_NeoPixel lightstrip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, PIXEL_TYPE);
 //NeoPatterns *neostrip;
-NeoGroup *neoGroup;
+NeoGroup *neoGroup1;
+NeoGroup *neoGroup2;
+
 bool started = false;
 int pixelCount = PIXEL_COUNT;
 
@@ -35,6 +37,11 @@ void setup()
 	Particle.function("setWipe", setWipe);
 	Particle.function("setFade", setFade);
 
+	Particle.function("setStatic2", setStatic2);
+	Particle.function("setRainbow2", setRainbow2);
+	Particle.function("setWipe2", setWipe2);
+	Particle.function("setFade2", setFade2);
+
 	Particle.variable("countLeds", pixelCount);
 	Particle.variable("isStarted", started);
 }
@@ -46,9 +53,15 @@ int initStrip(String args)
 	lightstrip.clear();
 	lightstrip.show();
 	pixelCount = lightstrip.numPixels();
+
 	//neostrip = new NeoPatterns((&lightstrip));
-	neoGroup = new NeoGroup((&lightstrip), 0, 0, pixelCount - 1);
-	//neoGroup = new NeoGroup((&lightstrip), 0, 0 + 4, pixelCount - 1 - 4);
+
+	//neoGroup1 = new NeoGroup((&lightstrip), 0, 0, pixelCount - 1);
+	//neoGroup1 = new NeoGroup((&lightstrip), 0, 0 + 4, pixelCount - 1 - 4);
+
+	neoGroup1 = new NeoGroup((&lightstrip), 0, 0, 15);
+	neoGroup2 = new NeoGroup((&lightstrip), 1, 16, 31);
+
 	started = true;
 	return pixelCount;
 }
@@ -56,8 +69,13 @@ int initStrip(String args)
 int stopStrip(String args)
 {
 	started = false;
+
+	neoGroup1->Stop();
+	neoGroup2->Stop();
+
 	lightstrip.clear();
 	lightstrip.show();
+
 	return 0;
 }
 
@@ -65,9 +83,9 @@ int setRainbow(String args)
 {
 	//neostrip->RainbowCycle(10);
 	std::vector<uint32_t> colors = {};
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(RAINBOW, colors, 10, FORWARD);
-	neoGroup->Start();
+	neoGroup1->Stop();
+	uint16_t result = neoGroup1->ConfigureEffect(RAINBOW, colors, 10, FORWARD);
+	neoGroup1->Start();
 	return result;
 }
 
@@ -75,9 +93,9 @@ int setWipe(String args)
 {
 	//neostrip->ColorWipe((uint32_t)0x0000ff00, (uint32_t)0x00007f7f, 50);
 	std::vector<uint32_t> colors = { 0xffff0000, 0xff7f7f00, 0xff00ff00, 0xff007f7f, 0xff0000ff, 0xff7f007f};
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(WIPE, colors, 25, FORWARD);
-	neoGroup->Start();
+	neoGroup1->Stop();
+	uint16_t result = neoGroup1->ConfigureEffect(WIPE, colors, 25, FORWARD);
+	neoGroup1->Start();
 	return result;
 }
 
@@ -85,9 +103,9 @@ int setFade(String args)
 {
 	//neostrip->Fade((uint32_t)0x000000ff, (uint32_t)0x00ff0000, (uint16_t)64, 10);
 	std::vector<uint32_t> colors = { 0xffff0000, 0xff00ff00, 0x00000000, 0xff0000ff, 0xff00ff00, 0x00000000};
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(FADE, colors, 10, FORWARD);
-	neoGroup->Start();
+	neoGroup1->Stop();
+	uint16_t result = neoGroup1->ConfigureEffect(FADE, colors, 10, FORWARD);
+	neoGroup1->Start();
 	return result;
 }
 
@@ -95,9 +113,49 @@ int setStatic(String args)
 {
 	//neostrip->Fade((uint32_t)0x000000ff, (uint32_t)0x00ff0000, (uint16_t)64, 10);
 	std::vector<uint32_t> colors = { 0xff007f7f, 0xff7f007f, 0xff7f7f00};
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(STATIC, colors, 10, FORWARD);
-	neoGroup->Start();
+	neoGroup1->Stop();
+	uint16_t result = neoGroup1->ConfigureEffect(STATIC, colors, 10, FORWARD);
+	neoGroup1->Start();
+	return result;
+}
+
+int setRainbow2(String args)
+{
+	//neostrip->RainbowCycle(10);
+	std::vector<uint32_t> colors = {};
+	neoGroup2->Stop();
+	uint16_t result = neoGroup2->ConfigureEffect(RAINBOW, colors, 10, FORWARD);
+	neoGroup2->Start();
+	return result;
+}
+
+int setWipe2(String args)
+{
+	//neostrip->ColorWipe((uint32_t)0x0000ff00, (uint32_t)0x00007f7f, 50);
+	std::vector<uint32_t> colors = { 0xffff0000, 0xff7f7f00, 0xff00ff00, 0xff007f7f, 0xff0000ff, 0xff7f007f};
+	neoGroup2->Stop();
+	uint16_t result = neoGroup2->ConfigureEffect(WIPE, colors, 25, FORWARD);
+	neoGroup2->Start();
+	return result;
+}
+
+int setFade2(String args)
+{
+	//neostrip->Fade((uint32_t)0x000000ff, (uint32_t)0x00ff0000, (uint16_t)64, 10);
+	std::vector<uint32_t> colors = { 0xffff0000, 0xff00ff00, 0x00000000, 0xff0000ff, 0xff00ff00, 0x00000000};
+	neoGroup2->Stop();
+	uint16_t result = neoGroup2->ConfigureEffect(FADE, colors, 10, FORWARD);
+	neoGroup2->Start();
+	return result;
+}
+
+int setStatic2(String args)
+{
+	//neostrip->Fade((uint32_t)0x000000ff, (uint32_t)0x00ff0000, (uint16_t)64, 10);
+	std::vector<uint32_t> colors = { 0xff007f7f, 0xff7f007f, 0xff7f7f00};
+	neoGroup2->Stop();
+	uint16_t result = neoGroup2->ConfigureEffect(STATIC, colors, 10, FORWARD);
+	neoGroup2->Start();
 	return result;
 }
 
@@ -107,7 +165,13 @@ void loop()
 	if (!started)
 		return;
 
+	bool autoShow = false;
 	//neostrip->Update();
-	neoGroup->Update();
+	neoGroup1->Update(autoShow);
+	neoGroup2->Update(autoShow);
+	if (!autoShow)
+	{
+		lightstrip.show();
+	}
 	pixelCount = lightstrip.numPixels();
 }

@@ -124,7 +124,7 @@ class NeoGroup
 	}
 
 	// Update the pattern
-	void Update()
+	void Update(bool autoShow = true)
 	{
 		if (!Active) return;
 
@@ -135,16 +135,16 @@ class NeoGroup
 			switch (ActivePattern)
 			{
 				case STATIC:
-					StaticUpdate();
+					StaticUpdate(autoShow);
 					break;
 				case RAINBOW:
-					RainbowUpdate();
+					RainbowUpdate(autoShow);
 					break;
 				case WIPE:
-					WipeUpdate();
+					WipeUpdate(autoShow);
 					break;
 				case FADE:
-					FadeUpdate();
+					FadeUpdate(autoShow);
 					break;
 				default:
 					break;
@@ -202,29 +202,35 @@ class NeoGroup
 	}
 
 	// Update the Rainbow Cycle Pattern
-	void RainbowUpdate()
+	void RainbowUpdate(bool autoShow = true)
 	{
 		for (int i = LedFirst; i <= LedLast; i++)
 		{
 			int i2 = i - LedFirst;
 			strip->setPixelColor(i, GetRainbowColor(((i2 * 256 / LedCount) + (255 - Index)) & 255));
 		}
-		strip->show();
+		if (autoShow)
+		{
+			strip->show();
+		}
 		Increment();
 	}
 
 	// Update the Color Wipe Pattern
-	void WipeUpdate()
+	void WipeUpdate(bool autoShow = true)
 	{
 		int colNr = (int)abs(Index / LedCount);
 		uint16_t indexNew = Index - (colNr * LedCount);
 		strip->setPixelColor(LedFirst + indexNew, Colors.at(colNr));
-		strip->show();
+		if (autoShow)
+		{
+			strip->show();
+		}
 		Increment();
 	}
 
 	// Update the Fade Pattern
-	void FadeUpdate()
+	void FadeUpdate(bool autoShow = true)
 	{
 		int colNr1 = (int)abs(Index / fadeLength);
 		int colNr2 = Direction == FORWARD ? colNr1 + 1 : colNr1 - 1;
@@ -252,19 +258,25 @@ class NeoGroup
 		{
 			strip->setPixelColor(i, newColor);
 		}
-		strip->show();
+		if (autoShow)
+		{
+			strip->show();
+		}
 		Increment();
 	}
 
 	// Update the Static Pattern
-	void StaticUpdate()
+	void StaticUpdate(bool autoShow = true)
 	{
 		uint32_t newColor = Colors.at(0);
 		for (int i = LedFirst; i <= LedLast; i++)
 		{
 			strip->setPixelColor(i, newColor);
 		}
-		strip->show();
+		if (autoShow)
+		{
+			strip->show();
+		}
 		Stop();
 	}
 
