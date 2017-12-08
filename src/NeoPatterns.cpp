@@ -8,27 +8,37 @@
 #include "neopixel.h"
 
 // Pattern types supported:
-enum  pattern { NONE, RAINBOW_CYCLE, COLOR_WIPE, FADE };
+enum pattern
+{
+	NONE,
+	RAINBOW_CYCLE,
+	COLOR_WIPE,
+	FADE
+};
 // Patern directions supported:
-enum  direction { FORWARD, REVERSE };
+enum direction
+{
+	FORWARD,
+	REVERSE
+};
 
 // NeoPattern Class - derived from the Adafruit_NeoPixel class
 class NeoPatterns
 {
-	Adafruit_NeoPixel* strip;
+	Adafruit_NeoPixel *strip;
 
-public:
+  public:
 	// Member Variables:
-	pattern ActivePattern;           // which pattern is running
-	direction Direction;             // direction to run the pattern
-	unsigned long Interval;           // milliseconds between updates
-	unsigned long lastUpdate;         // last update of position
-	uint32_t Color1, Color2;          // What colors are in use
-	uint16_t TotalSteps;          // total number of steps in the pattern
-	uint16_t Index;          // current step within the pattern
+	pattern ActivePattern;	// which pattern is running
+	direction Direction;	  // direction to run the pattern
+	unsigned long Interval;   // milliseconds between updates
+	unsigned long lastUpdate; // last update of position
+	uint32_t Color1, Color2;  // What colors are in use
+	uint16_t TotalSteps;	  // total number of steps in the pattern
+	uint16_t Index;			  // current step within the pattern
 
 	// Constructor - calls base-class constructor to initialize strip
-	NeoPatterns(Adafruit_NeoPixel* mainstrip)
+	NeoPatterns(Adafruit_NeoPixel *mainstrip)
 	{
 		strip = mainstrip;
 		//strip->clear();
@@ -37,10 +47,10 @@ public:
 	// Update the pattern
 	void Update()
 	{
-		if((millis() - lastUpdate) > Interval)     // time to update
+		if ((millis() - lastUpdate) > Interval) // time to update
 		{
 			lastUpdate = millis();
-			switch(ActivePattern)
+			switch (ActivePattern)
 			{
 			case RAINBOW_CYCLE:
 				RainbowCycleUpdate();
@@ -76,7 +86,7 @@ public:
 				}
 			}
 		}
-		else     // Direction == REVERSE
+		else // Direction == REVERSE
 		{
 			--Index;
 			if (Index <= 0)
@@ -88,7 +98,7 @@ public:
 				}
 				else
 				{
-					Index = TotalSteps-1;
+					Index = TotalSteps - 1;
 				}
 			}
 		}
@@ -100,7 +110,7 @@ public:
 		if (Direction == FORWARD)
 		{
 			Direction = REVERSE;
-			Index = TotalSteps-1;
+			Index = TotalSteps - 1;
 		}
 		else
 		{
@@ -122,7 +132,7 @@ public:
 	// Update the Rainbow Cycle Pattern
 	void RainbowCycleUpdate()
 	{
-		for(int i=0; i< strip->numPixels(); i++)
+		for (int i = 0; i < strip->numPixels(); i++)
 		{
 			strip->setPixelColor(i, Wheel(((i * 256 / strip->numPixels()) + Index) & 255));
 		}
@@ -179,7 +189,7 @@ public:
 		uint8_t blue = ((Blue(Color1) * (TotalSteps - Index)) + (Blue(Color2) * Index)) / TotalSteps;
 
 		uint32_t newColor = strip->Color(red, green, blue);
-		for(int i=0; i< strip->numPixels(); i++)
+		for (int i = 0; i < strip->numPixels(); i++)
 		{
 			strip->setPixelColor(i, newColor);
 		}
@@ -210,11 +220,11 @@ public:
 	uint32_t Wheel(byte WheelPos)
 	{
 		WheelPos = 255 - WheelPos;
-		if(WheelPos < 85)
+		if (WheelPos < 85)
 		{
 			return strip->Color(255 - WheelPos * 3, 0, WheelPos * 3);
 		}
-		else if(WheelPos < 170)
+		else if (WheelPos < 170)
 		{
 			WheelPos -= 85;
 			return strip->Color(0, WheelPos * 3, 255 - WheelPos * 3);
