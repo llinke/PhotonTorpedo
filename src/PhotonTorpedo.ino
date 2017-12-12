@@ -5,28 +5,23 @@
 * Date:
 */
 
-#include "neopixel.h"
-//#include "NeoPatterns.cpp"
+#include "FastLedInclude.h"
 #include "NeoGroup.cpp"
 #include <vector>
 
 SYSTEM_MODE(AUTOMATIC);
 
-// IMPORTANT: Set pixel COUNT, PIN and TYPE
-#define PIXEL_PIN D2
-#define PIXEL_COUNT 32
-#define PIXEL_TYPE WS2812B
+// Static size
+//struct CRGB leds[PIXEL_COUNT];
+// Dynamic size:
+struct CRGB *leds = NULL;
 
-// Define some NeoPatterns for the lightstrip as well as some completion routines
-Adafruit_NeoPixel lightstrip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, PIXEL_TYPE);
-//NeoPatterns *neostrip;
 NeoGroup *neoGroup1;
 NeoGroup *neoGroup2;
 
 bool started = false;
 int pixelCount = PIXEL_COUNT;
 
-// Initialize everything and prepare to start
 void setup()
 {
 	Particle.function("initStrip", initStrip);
@@ -48,20 +43,29 @@ void setup()
 
 int initStrip(String args)
 {
-	lightstrip.setBrightness(64);
-	lightstrip.begin();
-	lightstrip.clear();
-	lightstrip.show();
-	pixelCount = lightstrip.numPixels();
+	leds = (struct CRGB *) malloc(PIXEL_COUNT * sizeof(struct CRGB));
+	FastLED.addLeds<PIXEL_TYPE, PIXEL_PIN>(leds, PIXEL_COUNT);
 
-	//neostrip = new NeoPatterns((&lightstrip));
+	//FastLED.setMaxPowerInVoltsAndMilliamps(5,3000);
+	FastLED.setBrightness(64);
+	FastLED.clear(true);
+	FastLED.show();
 
-	//neoGroup1 = new NeoGroup((&lightstrip), 0, 0, pixelCount - 1);
-	//neoGroup1 = new NeoGroup((&lightstrip), 0, 0 + 4, pixelCount - 1 - 4);
+	// TEST
+	for(int dot = 0; dot < PIXEL_COUNT; dot++)
+	{
+			leds[dot] =  CHSV(random8(),255,255);
+      FastLED.show();
+      delay(10);
+  }
+	delay(1000);
+	FastLED.clear(true);
+	FastLED.show();
 
-	neoGroup1 = new NeoGroup((&lightstrip), 0, 0, 15);
-	neoGroup2 = new NeoGroup((&lightstrip), 1, 16, 31);
+	neoGroup1 = new NeoGroup(0, 0, (PIXEL_COUNT / 2) - 1);
+	neoGroup2 = new NeoGroup(1, (PIXEL_COUNT / 2), PIXEL_COUNT - 1);
 
+	pixelCount = PIXEL_COUNT;
 	started = true;
 	return pixelCount;
 }
@@ -73,15 +77,14 @@ int stopStrip(String args)
 	neoGroup1->Stop();
 	neoGroup2->Stop();
 
-	lightstrip.clear();
-	lightstrip.show();
+	FastLED.clear(true);
+	FastLED.show();
 
 	return 0;
 }
 
 int setRainbow(String args)
 {
-	//neostrip->RainbowCycle(10);
 	std::vector<uint32_t> colors = {};
 	neoGroup1->Stop();
 	uint16_t result = neoGroup1->ConfigureEffect(RAINBOW, colors, 10, FORWARD);
@@ -91,7 +94,6 @@ int setRainbow(String args)
 
 int setWipe(String args)
 {
-	//neostrip->ColorWipe((uint32_t)0x0000ff00, (uint32_t)0x00007f7f, 50);
 	std::vector<uint32_t> colors = { 0xffff0000, 0xff7f7f00, 0xff00ff00, 0xff007f7f, 0xff0000ff, 0xff7f007f};
 	neoGroup1->Stop();
 	uint16_t result = neoGroup1->ConfigureEffect(WIPE, colors, 25, FORWARD);
@@ -101,7 +103,6 @@ int setWipe(String args)
 
 int setFade(String args)
 {
-	//neostrip->Fade((uint32_t)0x000000ff, (uint32_t)0x00ff0000, (uint16_t)64, 10);
 	std::vector<uint32_t> colors = { 0xffff0000, 0xff00ff00, 0x00000000, 0xff0000ff, 0xff00ff00, 0x00000000};
 	neoGroup1->Stop();
 	uint16_t result = neoGroup1->ConfigureEffect(FADE, colors, 10, FORWARD);
@@ -111,7 +112,6 @@ int setFade(String args)
 
 int setStatic(String args)
 {
-	//neostrip->Fade((uint32_t)0x000000ff, (uint32_t)0x00ff0000, (uint16_t)64, 10);
 	std::vector<uint32_t> colors = { 0xff007f7f, 0xff7f007f, 0xff7f7f00};
 	neoGroup1->Stop();
 	uint16_t result = neoGroup1->ConfigureEffect(STATIC, colors, 10, FORWARD);
@@ -121,7 +121,6 @@ int setStatic(String args)
 
 int setRainbow2(String args)
 {
-	//neostrip->RainbowCycle(10);
 	std::vector<uint32_t> colors = {};
 	neoGroup2->Stop();
 	uint16_t result = neoGroup2->ConfigureEffect(RAINBOW, colors, 10, FORWARD);
@@ -131,7 +130,6 @@ int setRainbow2(String args)
 
 int setWipe2(String args)
 {
-	//neostrip->ColorWipe((uint32_t)0x0000ff00, (uint32_t)0x00007f7f, 50);
 	std::vector<uint32_t> colors = { 0xffff0000, 0xff7f7f00, 0xff00ff00, 0xff007f7f, 0xff0000ff, 0xff7f007f};
 	neoGroup2->Stop();
 	uint16_t result = neoGroup2->ConfigureEffect(WIPE, colors, 25, FORWARD);
@@ -141,7 +139,6 @@ int setWipe2(String args)
 
 int setFade2(String args)
 {
-	//neostrip->Fade((uint32_t)0x000000ff, (uint32_t)0x00ff0000, (uint16_t)64, 10);
 	std::vector<uint32_t> colors = { 0xffff0000, 0xff00ff00, 0x00000000, 0xff0000ff, 0xff00ff00, 0x00000000};
 	neoGroup2->Stop();
 	uint16_t result = neoGroup2->ConfigureEffect(FADE, colors, 10, FORWARD);
@@ -151,7 +148,6 @@ int setFade2(String args)
 
 int setStatic2(String args)
 {
-	//neostrip->Fade((uint32_t)0x000000ff, (uint32_t)0x00ff0000, (uint16_t)64, 10);
 	std::vector<uint32_t> colors = { 0xff007f7f, 0xff7f007f, 0xff7f7f00};
 	neoGroup2->Stop();
 	uint16_t result = neoGroup2->ConfigureEffect(STATIC, colors, 10, FORWARD);
@@ -166,12 +162,11 @@ void loop()
 		return;
 
 	bool autoShow = false;
-	//neostrip->Update();
 	neoGroup1->Update(autoShow);
 	neoGroup2->Update(autoShow);
 	if (!autoShow)
 	{
-		lightstrip.show();
+		FastLED.show();
 	}
-	pixelCount = lightstrip.numPixels();
+	pixelCount = PIXEL_COUNT;
 }

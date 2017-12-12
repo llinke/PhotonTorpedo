@@ -5,7 +5,7 @@
 * Date:
 */
 
-#include "neopixel.h"
+#include "FastLedInclude.h"
 #include <vector>
 
 enum pattern
@@ -27,7 +27,6 @@ enum direction
 // NeoPattern Class - derived from the Adafruit_NeoPixel class
 class NeoGroup
 {
-	Adafruit_NeoPixel *strip;
 	int fadeLength = 64;
 
   public:
@@ -45,7 +44,7 @@ class NeoGroup
 		unsigned long lastUpdate;
 
 	// Constructor - calls base-class constructor to initialize strip
-	NeoGroup(Adafruit_NeoPixel *mainstrip, int groupID, uint16_t ledFirst, uint16_t ledLast)
+	NeoGroup(int groupID, uint16_t ledFirst, uint16_t ledLast)
 	{
 		GroupID = groupID;
 		Active = false;
@@ -54,14 +53,11 @@ class NeoGroup
 		LedLast = ledLast;
 		LedCount = (ledLast - ledFirst) + 1;
 		TotalSteps = LedCount;
-
-		strip = mainstrip;
-		//strip->clear();
 	}
 
 	uint16_t ConfigureEffect(pattern pattern, std::vector<uint32_t> colors, uint8_t interval, direction dir = FORWARD)
 	{
-		if (pattern == RAINBOW)
+    if (pattern == RAINBOW)
 		{
 			ActivePattern = RAINBOW;
 			Interval = interval;
@@ -109,7 +105,6 @@ class NeoGroup
 			TotalSteps = 1;
 			Direction = dir;
 		}
-
 		return TotalSteps;
 	}
 
@@ -137,7 +132,7 @@ class NeoGroup
 				case STATIC:
 					StaticUpdate(autoShow);
 					break;
-				case RAINBOW:
+        case RAINBOW:
 					RainbowUpdate(autoShow);
 					break;
 				case WIPE:
@@ -201,17 +196,17 @@ class NeoGroup
 		}
 	}
 
-	// Update the Rainbow Cycle Pattern
+  // Update the Rainbow Cycle Pattern
 	void RainbowUpdate(bool autoShow = true)
 	{
 		for (int i = LedFirst; i <= LedLast; i++)
 		{
 			int i2 = i - LedFirst;
-			strip->setPixelColor(i, GetRainbowColor(((i2 * 256 / LedCount) + (255 - Index)) & 255));
+			leds[i] = CHSV(((i2 * 256 / LedCount) + (255 - Index)) & 255, 255, 255);
 		}
 		if (autoShow)
 		{
-			strip->show();
+			FastLED.show();
 		}
 		Increment();
 	}
@@ -221,10 +216,10 @@ class NeoGroup
 	{
 		int colNr = (int)abs(Index / LedCount);
 		uint16_t indexNew = Index - (colNr * LedCount);
-		strip->setPixelColor(LedFirst + indexNew, Colors.at(colNr));
+		leds[LedFirst + indexNew] = Colors.at(colNr);
 		if (autoShow)
 		{
-			strip->show();
+			FastLED.show();
 		}
 		Increment();
 	}
@@ -252,15 +247,14 @@ class NeoGroup
 		uint8_t red = ((Red(color1) * (fadeLength - indexNew)) + (Red(color2) * indexNew)) / fadeLength;
 		uint8_t green = ((Green(color1) * (fadeLength - indexNew)) + (Green(color2) * indexNew)) / fadeLength;
 		uint8_t blue = ((Blue(color1) * (fadeLength - indexNew)) + (Blue(color2) * indexNew)) / fadeLength;
-		uint32_t newColor = strip->Color(red, green, blue);
 
 		for (int i = LedFirst; i <= LedLast; i++)
 		{
-			strip->setPixelColor(i, newColor);
+			leds[i].setRGB(red, green, blue);
 		}
 		if (autoShow)
 		{
-			strip->show();
+			FastLED.show();
 		}
 		Increment();
 	}
@@ -271,11 +265,11 @@ class NeoGroup
 		uint32_t newColor = Colors.at(0);
 		for (int i = LedFirst; i <= LedLast; i++)
 		{
-			strip->setPixelColor(i, newColor);
+			leds[i] = newColor;
 		}
 		if (autoShow)
 		{
-			strip->show();
+			FastLED.show();
 		}
 		Stop();
 	}
@@ -296,26 +290,5 @@ class NeoGroup
 	uint8_t Blue(uint32_t color)
 	{
 		return color & 0xFF;
-	}
-
-	// Input a value 0 to 255 to get a color value.
-	// The colours are a transition r - g - b - back to r.
-	uint32_t GetRainbowColor(byte WheelPos)
-	{
-		WheelPos = 255 - WheelPos;
-		if (WheelPos < 85)
-		{
-			return strip->Color(255 - WheelPos * 3, 0, WheelPos * 3);
-		}
-		else if (WheelPos < 170)
-		{
-			WheelPos -= 85;
-			return strip->Color(0, WheelPos * 3, 255 - WheelPos * 3);
-		}
-		else
-		{
-			WheelPos -= 170;
-			return strip->Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-		}
 	}
 };
