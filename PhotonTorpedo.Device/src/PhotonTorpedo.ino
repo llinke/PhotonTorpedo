@@ -33,8 +33,10 @@ void setup()
 
 	Particle.function("setStatic", setStatic);
 	Particle.function("setRainbow", setRainbow);
-	Particle.function("setWipe", setWipe);
+	Particle.function("setRainbow2", setRainbow2);
+	Particle.function("setConfetti", setConfetti);
 	Particle.function("setFade", setFade);
+	Particle.function("setFire", setFire);
 
 	Particle.variable("countLeds", pixelCount);
 	Particle.variable("countGroups", groupCount);
@@ -118,14 +120,14 @@ int setRainbow(String args)
 
 	NeoGroup *neoGroup = neoGroups.at(grpId);
 
-	std::vector<uint32_t> colors = {};
+	std::vector<CRGB> colors = {};
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(RAINBOW, colors, 10, FORWARD);
+	uint16_t result = neoGroup->ConfigureEffect(RAINBOW, colors, 50, FORWARD);
 	neoGroup->Start();
 	return result;
 }
 
-int setWipe(String args)
+int setRainbow2(String args)
 {
 	JsonObject& jsonArgs = parseArgs(args);
 	if (!jsonArgs.success()) { return -1; }
@@ -135,9 +137,26 @@ int setWipe(String args)
 
 	NeoGroup *neoGroup = neoGroups.at(grpId);
 
-	std::vector<uint32_t> colors = { 0xffff0000, 0xff7f7f00, 0xff00ff00, 0xff007f7f, 0xff0000ff, 0xff7f007f};
+	std::vector<CRGB> colors = {};
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(WIPE, colors, 25, FORWARD);
+	uint16_t result = neoGroup->ConfigureEffect(RAINBOW2, colors, 50, FORWARD);
+	neoGroup->Start();
+	return result;
+}
+
+int setConfetti(String args)
+{
+	JsonObject& jsonArgs = parseArgs(args);
+	if (!jsonArgs.success()) { return -1; }
+	int grpId = -1;
+	if (jsonArgs.containsKey("grp")) { grpId = jsonArgs["grp"]; }
+	if (grpId < 0 || grpId >= neoGroups.size()) { return -2; }
+
+	NeoGroup *neoGroup = neoGroups.at(grpId);
+
+	std::vector<CRGB> colors = {};
+	neoGroup->Stop();
+	uint16_t result = neoGroup->ConfigureEffect(CONFETTI, colors, 25, FORWARD);
 	neoGroup->Start();
 	return result;
 }
@@ -152,9 +171,31 @@ int setFade(String args)
 
 	NeoGroup *neoGroup = neoGroups.at(grpId);
 
-	std::vector<uint32_t> colors = { 0xffff0000, 0xff00ff00, 0x00000000, 0xff0000ff, 0xff00ff00, 0x00000000};
+	std::vector<CRGB> colors =
+	{
+		CRGB(0xff0000),
+		CRGB(0x00ff00),
+		CRGB(0x0000ff)
+	};
 	neoGroup->Stop();
 	uint16_t result = neoGroup->ConfigureEffect(FADE, colors, 10, FORWARD);
+	neoGroup->Start();
+	return result;
+}
+
+int setFire(String args)
+{
+	JsonObject& jsonArgs = parseArgs(args);
+	if (!jsonArgs.success()) { return -1; }
+	int grpId = -1;
+	if (jsonArgs.containsKey("grp")) { grpId = jsonArgs["grp"]; }
+	if (grpId < 0 || grpId >= neoGroups.size()) { return -2; }
+
+	NeoGroup *neoGroup = neoGroups.at(grpId);
+
+	std::vector<CRGB> colors = {};
+	neoGroup->Stop();
+	uint16_t result = neoGroup->ConfigureEffect(FIRE, colors, 50, FORWARD);
 	neoGroup->Start();
 	return result;
 }
@@ -169,9 +210,9 @@ int setStatic(String args)
 
 	NeoGroup *neoGroup = neoGroups.at(grpId);
 
-	std::vector<uint32_t> colors = { 0xff007f7f, 0xff7f007f, 0xff7f7f00};
+	std::vector<CRGB> colors = { CRGB(0x007f7f) };
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(STATIC, colors, 10, FORWARD);
+	uint16_t result = neoGroup->ConfigureEffect(STATIC, colors, 50, FORWARD);
 	neoGroup->Start();
 	//return neoGroup->LedLast - neoGroup->LedFirst + 1;
 	return result;
@@ -183,18 +224,14 @@ void loop()
 	if (!started)
 		return;
 
-	bool autoShow = false;
 	int count = 0;
 	for(int i=0; i < neoGroups.size(); i++)
 	{
 		NeoGroup *neoGroup = neoGroups.at(i);
 		count += neoGroup->LedCount;
-		neoGroup->Update(autoShow);
+		neoGroup->Update();
 	}
-	if (!autoShow)
-	{
-		FastLED.show();
-	}
+	FastLED.show();
 	pixelCount = count; //PIXEL_COUNT;
 	groupCount = neoGroups.size();
 }
