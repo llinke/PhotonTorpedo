@@ -32,10 +32,11 @@ void setup()
 	Particle.function("stopStrip", stopStrip);
 
 	Particle.function("setStatic", setStatic);
+	Particle.function("setFade", setFade);
+	Particle.function("setFade2", setFade2);
 	Particle.function("setRainbow", setRainbow);
 	Particle.function("setRainbow2", setRainbow2);
 	Particle.function("setConfetti", setConfetti);
-	Particle.function("setFade", setFade);
 	Particle.function("setFire", setFire);
 
 	Particle.variable("countLeds", pixelCount);
@@ -70,11 +71,17 @@ int initStrip(String args)
 	// TEST
 	for(int dot = 0; dot < PIXEL_COUNT; dot++)
 	{
-			leds[dot] =  CHSV(random8(),255,255);
+			leds[dot] = CHSV(random8(),255,255);
       FastLED.show();
       delay(10);
   }
-	delay(1000);
+	delay(500);
+	for(int dot = 0; dot < 20; dot++)
+	{
+			fadeToBlackBy(leds, PIXEL_COUNT, 20);
+      FastLED.show();
+      delay(50);
+  }
 	FastLED.clear(true);
 	FastLED.show();
 
@@ -173,12 +180,37 @@ int setFade(String args)
 
 	std::vector<CRGB> colors =
 	{
-		CRGB(0xff0000),
+		CRGB(0x0000ff),
 		CRGB(0x00ff00),
-		CRGB(0x0000ff)
+		CRGB(0xff0000)
 	};
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(FADE, colors, 10, FORWARD);
+	uint16_t result = neoGroup->ConfigureEffect(FADE, colors, 50, FORWARD);
+	neoGroup->Start();
+	return result;
+}
+
+int setFade2(String args)
+{
+	JsonObject& jsonArgs = parseArgs(args);
+	if (!jsonArgs.success()) { return -1; }
+	int grpId = -1;
+	if (jsonArgs.containsKey("grp")) { grpId = jsonArgs["grp"]; }
+	if (grpId < 0 || grpId >= neoGroups.size()) { return -2; }
+
+	NeoGroup *neoGroup = neoGroups.at(grpId);
+
+	std::vector<CRGB> colors =
+	{
+		CRGB(0x0000ff),
+		CRGB(0xffffff),
+		CRGB(0x00ff00),
+		CRGB(0xffffff),
+		CRGB(0xff0000),
+		CRGB(0xffffff)
+	};
+	neoGroup->Stop();
+	uint16_t result = neoGroup->ConfigureEffect(FADE, colors, 50, FORWARD);
 	neoGroup->Start();
 	return result;
 }

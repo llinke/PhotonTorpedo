@@ -82,7 +82,7 @@ class NeoGroup
 		Direction = dir;
 		if (colors.size() != 0)
 		{
-			Colors = GeneratePalette(colors);
+			Colors = GenerateRGBPalette(colors);
 		}
 		else
 		{
@@ -108,6 +108,7 @@ class NeoGroup
 		}
 		if (pattern == FIRE)
 		{
+			fill_solid(LedFirst, LedCount, 0x000000);
 			Colors = firePalettes[firePaletteNr];
 			effectFunc = &NeoGroup::Fire;
 		}
@@ -195,7 +196,9 @@ class NeoGroup
 
 	void Rainbow()
 	{
-		fill_rainbow(LedFirst, LedCount, Index, 7);
+		uint8_t rainBowLength = 64;
+		uint8_t deltaHue = rainBowLength > LedCount ? rainBowLength / LedCount : 1;
+		fill_rainbow(LedFirst, LedCount, Index, deltaHue);
 		Increment();
 	}
 
@@ -269,26 +272,31 @@ class NeoGroup
 		Stop();
 	}
 
-	CRGBPalette16 GeneratePalette(std::vector<CRGB> colors)
+	CRGBPalette16 GenerateRGBPalette(std::vector<CRGB> colors)
 	{
 		CRGB nc[16];
 		int colCount = colors.size();
+		/*
 		for(int c = 0; c < 16; c++)
 		{
-			int modVal = (c * (colCount + 1)) % 16;
-			if (modVal == 0)
-			{
-				nc[c] = colors[(c * (colCount + 1)) >> 4];
-			}
-			else
-			{
-				int newColIdx1 = (c * (colCount + 1)) >> 4;
-				int newColIdx2 = modVal <= 8 ? newColIdx1 : newColIdx1 + 1;
-				if (newColIdx2 >= colCount) newColIdx2 = 0;
-				CRGB col1 = colors[newColIdx1];
-				CRGB col2 = colors[newColIdx2];
-				nc[c] = blend(col1, col2, modVal / 16);
-			}
+			int modVal = (c * colCount) % 16;
+			int newColIdx1 = (c * colCount) >> 4; // same as DIV 16
+			int newColIdx2 = newColIdx1;
+			if (newColIdx2 >= colCount) newColIdx2 = 0;
+			CRGB col1 = colors[newColIdx1];
+			CRGB col2 = colors[newColIdx2];
+			nc[c] = blend(col1, col2, modVal << 4); // same as MUL 16
+		}
+		*/
+		for(int c = 0; c < colCount; c++)
+		{
+			uint16_t trgtIdx1 = ((c * 16) / colCount);
+			uint16_t trgtIdx2 = (((c + 1) * 16) / colCount) - 1;
+			if (trgtIdx2 > 15) trgtIdx2 = 15;
+			if (trgtIdx2 < 0) trgtIdx2 = 0;
+			CRGB col1 = colors[c];
+			CRGB col2 = (c + 1 < colCount) ? colors[c + 1] : colors[0];
+			fill_gradient_RGB(&(nc[0]), trgtIdx1, col1, trgtIdx2, col2);
 		}
 		return CRGBPalette16(
 			nc[0],nc[1],nc[2],nc[3],nc[4],nc[5],nc[6],nc[7],
