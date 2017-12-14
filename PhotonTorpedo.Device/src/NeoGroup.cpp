@@ -73,7 +73,10 @@ class NeoGroup
 {
 #define FIRE_COOLING 55
 #define FIRE_SPARKING 120
-	uint8_t firePaletteNr = 4;
+#define FADEOUT_DURATION 1000
+#define FADEOUT_STEPS 20
+
+	uint8_t firePaletteNr = 6;
 
 	int fadeLength = 64;
 	void (NeoGroup::*effectFunc)();
@@ -84,6 +87,7 @@ class NeoGroup
 	int GroupID;
 	int LedCount;
 
+	std::vector<CRGB> ActiveColors = {};
 	CRGBPalette16 Colors;
 	bool AddGlitter;
 	uint16_t TotalSteps;
@@ -92,6 +96,7 @@ class NeoGroup
 
 	unsigned long Interval;
 	bool Active;
+	int FadeOut = 0;
 
 	// Constructor - calls base-class constructor to initialize strip
 	NeoGroup(int groupID, int ledFirst, int ledLast)
@@ -106,6 +111,8 @@ class NeoGroup
 
 	uint16_t ConfigureEffect(pattern pattern, std::vector<CRGB> colors, uint8_t fps, direction dir = FORWARD, bool addglitter = false)
 	{
+		Stop();
+
 		Interval = (1000 / fps);
 		Index = 0;
 		Direction = dir;
@@ -152,16 +159,33 @@ class NeoGroup
 	void Start()
 	{
 		Active = true;
+		lastUpdate = 0;
 	}
 
-	void Stop()
+	void Stop(bool stopNow = false)
 	{
 		Active = false;
+		FadeOut = (stopNow) ? 0 : FADEOUT_STEPS;
 	}
 
 	// Update the pattern
 	void Update()
 	{
+		if (FadeOut > 0)
+		{
+			if ((millis() - lastUpdate) > (FADEOUT_DURATION / FADEOUT_STEPS))
+			{
+				lastUpdate = millis();
+				fadeToBlackBy(LedFirst, LedCount, FADEOUT_STEPS);
+				FadeOut--;
+				if (FadeOut == 0)
+				{
+					fill_solid(LedFirst, LedCount, 0x000000);
+				}
+			}
+			return;
+		}
+
 		if (!Active)
 			return;
 
@@ -171,6 +195,7 @@ class NeoGroup
 			if (effectFunc != NULL)
 			{
 				(this->*effectFunc)();
+
 				if (AddGlitter)
 				{
 					Glitter();
