@@ -28,7 +28,6 @@ enum pattern
 	NONE,
 	STATIC,
 	RAINBOW,
-	RAINBOW2,
 	CONFETTI,
 	FADE,
 	FIRE
@@ -56,12 +55,15 @@ class NeoGroup
   public:
 	int GroupID;
 	int LedCount;
-	direction Direction;
+
 	CRGBPalette16 Colors;
+	bool AddGlitter;
 	uint16_t TotalSteps;
 	uint16_t Index;
-	bool Active;
+	direction Direction;
+
 	unsigned long Interval;
+	bool Active;
 
 	// Constructor - calls base-class constructor to initialize strip
 	NeoGroup(int groupID, int ledFirst, int ledLast)
@@ -74,11 +76,12 @@ class NeoGroup
 		TotalSteps = LedCount;
 	}
 
-	uint16_t ConfigureEffect(pattern pattern, std::vector<CRGB> colors, uint8_t fps, direction dir = FORWARD)
+	uint16_t ConfigureEffect(pattern pattern, std::vector<CRGB> colors, uint8_t fps, direction dir = FORWARD, bool addglitter = false)
 	{
 		Interval = (1000 / fps);
 		Index = 0;
 		Direction = dir;
+		AddGlitter = false;
 		if (colors.size() != 0)
 		{
 			Colors = GenerateRGBPalette(colors);
@@ -92,10 +95,7 @@ class NeoGroup
 		if (pattern == RAINBOW)
 		{
 			effectFunc = &NeoGroup::Rainbow;
-		}
-		if (pattern == RAINBOW2)
-		{
-			effectFunc = &NeoGroup::RainbowWithGlitter;
+			AddGlitter = addglitter;
 		}
 		if (pattern == CONFETTI)
 		{
@@ -104,6 +104,7 @@ class NeoGroup
 		if (pattern == FADE)
 		{
 			effectFunc = &NeoGroup::Fade;
+			AddGlitter = addglitter;
 		}
 		if (pattern == FIRE)
 		{
@@ -114,6 +115,7 @@ class NeoGroup
 		if (pattern == STATIC)
 		{
 			effectFunc = &NeoGroup::Static;
+			AddGlitter = addglitter;
 			TotalSteps = 1;
 		}
 		return TotalSteps;
@@ -141,6 +143,10 @@ class NeoGroup
 			if (effectFunc != NULL)
 			{
 				(this->*effectFunc)();
+				if (AddGlitter)
+				{
+					Glitter();
+				}
 			}
 		}
 	}
@@ -194,6 +200,21 @@ class NeoGroup
 		}
 	}
 
+	// Update the Static Pattern
+	void Static()
+	{
+		CRGB newColor = ColorFromPalette(Colors, 0);
+		fill_solid(LedFirst, LedCount, newColor);
+		//Stop();
+	}
+
+	void Fade()
+	{
+		CRGB newColor = ColorFromPalette(Colors, Index);
+		fill_solid(LedFirst, LedCount, newColor);
+		Increment();
+	}
+
 	void Rainbow()
 	{
 		uint8_t rainBowLength = 64;
@@ -202,11 +223,8 @@ class NeoGroup
 		Increment();
 	}
 
-	void RainbowWithGlitter()
+	void Glitter(uint8_t chanceOfGlitter = 80)
 	{
-		Rainbow();
-
-		uint8_t chanceOfGlitter = 80;
 		if (random8() < chanceOfGlitter)
 		{
 			LedFirst[random16(LedCount)] += CRGB::White;
@@ -218,13 +236,6 @@ class NeoGroup
 		fadeToBlackBy(LedFirst, LedCount, 10);
 		int pos = random16(LedCount);
 		LedFirst[pos] += CHSV(Index + random8(64), 200, 255);
-		Increment();
-	}
-
-	void Fade()
-	{
-		CRGB newColor = ColorFromPalette(Colors, Index);
-		fill_solid(LedFirst, LedCount, newColor);
 		Increment();
 	}
 
@@ -266,14 +277,6 @@ class NeoGroup
 			LedFirst[pixelnumber] = color;
 		}
 		Increment();
-	}
-
-	// Update the Static Pattern
-	void Static()
-	{
-		CRGB newColor = ColorFromPalette(Colors, 0);
-		fill_solid(LedFirst, LedCount, newColor);
-		Stop();
 	}
 
 	CRGBPalette16 GenerateRGBPalette(std::vector<CRGB> colors)
