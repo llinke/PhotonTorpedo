@@ -6,6 +6,7 @@
 */
 
 #include "FastLedInclude.h"
+#include "ColorPalettes.h"
 #include "NeoGroup.cpp"
 #include "SparkJson.h"
 #include <vector>
@@ -89,12 +90,17 @@ int initStrip(String args)
 
 	neoGroups.clear();
 
+	/*
+	// Group 0: all LEDs
+	NeoGroup *neoGroup0 = new NeoGroup("AllLEDs", 0, PIXEL_COUNT - 1);
+	neoGroups.push_back(neoGroup0);
+	*/
 	// Group 1
-	NeoGroup *neoGroup1 = new NeoGroup(0, 0, (PIXEL_COUNT / 2) - 1);
+	NeoGroup *neoGroup1 = new NeoGroup("Room 1", 0, (PIXEL_COUNT / 2) - 1);
 	neoGroups.push_back(neoGroup1);
 	//neoGroups.push_back(NeoGroup(0, 0, (PIXEL_COUNT / 2) - 1));
 	// Group 2
-	NeoGroup *neoGroup2 = new NeoGroup(1, (PIXEL_COUNT / 2), PIXEL_COUNT - 1);
+	NeoGroup *neoGroup2 = new NeoGroup("Room 1", (PIXEL_COUNT / 2), PIXEL_COUNT - 1);
 	neoGroups.push_back(neoGroup2);
 	//neoGroups.push_back(NeoGroup(1, (PIXEL_COUNT / 2), PIXEL_COUNT - 1));
 
@@ -156,7 +162,8 @@ int setStatic(String args)
 
 	std::vector<CRGB> colors = {CRGB(0x007f7f)};
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(STATIC, colors, 50, FORWARD, false);
+	uint16_t result = neoGroup->ConfigureEffect(STATIC, 50, FORWARD, false);
+	neoGroup->ConfigureColors(colors);
 	neoGroup->Start();
 	//return neoGroup->LedLast - neoGroup->LedFirst + 1;
 	return result;
@@ -183,7 +190,8 @@ int setStatic2(String args)
 
 	std::vector<CRGB> colors = {CRGB(0x007f7f)};
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(STATIC, colors, 50, FORWARD, true);
+	uint16_t result = neoGroup->ConfigureEffect(STATIC, 50, FORWARD, true);
+	neoGroup->ConfigureColors(colors);
 	neoGroup->Start();
 	//return neoGroup->LedLast - neoGroup->LedFirst + 1;
 	return result;
@@ -214,7 +222,8 @@ int setFade(String args)
 			CRGB(0x00ff00),
 			CRGB(0xff0000)};
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(FADE, colors, 50, FORWARD);
+	uint16_t result = neoGroup->ConfigureEffect(FADE, 50, FORWARD);
+	neoGroup->ConfigureColors(colors);
 	neoGroup->Start();
 	return result;
 }
@@ -258,7 +267,8 @@ int setFade2(String args)
 			CRGB(0xffffff)};
 	*/
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(FADE, colors, 50, FORWARD);
+	uint16_t result = neoGroup->ConfigureEffect(FADE, 50, FORWARD);
+	neoGroup->ConfigureColors(colors);
 	neoGroup->Start();
 	return result;
 }
@@ -300,7 +310,8 @@ int setFade3(String args)
 	*/
 
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(FADE, colors, 50, FORWARD, true);
+	uint16_t result = neoGroup->ConfigureEffect(FADE, 50, FORWARD, true);
+	neoGroup->ConfigureColors(colors);
 	neoGroup->Start();
 	return result;
 }
@@ -326,7 +337,8 @@ int setRainbow(String args)
 
 	std::vector<CRGB> colors = {};
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(RAINBOW, colors, 50, FORWARD, false);
+	uint16_t result = neoGroup->ConfigureEffect(RAINBOW, 50, FORWARD, false);
+	neoGroup->ConfigureColors(colors);
 	neoGroup->Start();
 	return result;
 }
@@ -352,7 +364,8 @@ int setRainbow2(String args)
 
 	std::vector<CRGB> colors = {};
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(RAINBOW, colors, 50, FORWARD, true);
+	uint16_t result = neoGroup->ConfigureEffect(RAINBOW, 50, FORWARD, true);
+	neoGroup->ConfigureColors(colors); // Not required
 	neoGroup->Start();
 	return result;
 }
@@ -378,7 +391,8 @@ int setConfetti(String args)
 
 	std::vector<CRGB> colors = {};
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(CONFETTI, colors, 25, FORWARD);
+	uint16_t result = neoGroup->ConfigureEffect(CONFETTI, 25, FORWARD);
+	neoGroup->ConfigureColors(colors);
 	neoGroup->Start();
 	return result;
 }
@@ -399,12 +413,22 @@ int setFire(String args)
 	{
 		return -2;
 	}
-
 	NeoGroup *neoGroup = neoGroups.at(grpId);
 
-	std::vector<CRGB> colors = {};
+	String palKey = "Fire6";
+	if (jsonArgs.containsKey("pal"))
+	{
+		palKey = jsonArgs["pal"];
+	}
+	if (ColorPalettes.find(palKey) == ColorPalettes.end())
+	{
+		return -2;
+	}
+	std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
+
 	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(FIRE, colors, 50, FORWARD);
+	uint16_t result = neoGroup->ConfigureEffect(FIRE, 50, FORWARD);
+	neoGroup->ConfigureColors(colors);
 	neoGroup->Start();
 	return result;
 }

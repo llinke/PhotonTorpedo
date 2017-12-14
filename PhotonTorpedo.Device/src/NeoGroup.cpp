@@ -9,48 +9,6 @@
 #include <vector>
 #include <map>
 
-const CRGBPalette16 firePalettes[] = {
-	// This first palette is the basic 'black body radiation' colors,
-	// which run from black to red to bright yellow to white.
-	HeatColors_p,
-	// First, a gradient from black to red to yellow to white -- similar to HeatColors_p
-	CRGBPalette16(CRGB::Black, CRGB::Red, CRGB::Yellow, CRGB::White),
-	// Second, this palette is like the heat colors, but blue/aqua instead of red/yellow
-	CRGBPalette16(CRGB::Black, CRGB::Blue, CRGB::Aqua, CRGB::White),
-	// Third, here's a simpler, three-step gradient, from black to red to white
-	CRGBPalette16(CRGB::Black, CRGB::Red, CRGB::White),
-	// Fourth, here's a warmer gradient, from black to yellow
-	CRGBPalette16(CRGB::Black, CRGB::Red, CRGB::Orange, CRGB::Yellow),
-	// Fifth, here's a second warmer gradient, from black to blue
-	CRGBPalette16(CRGB::Black, CRGB::Red, CRGB::Orange, CRGB::Blue),
-	// Sixth, here's a third warmer gradient, from darkred to yellow
-	CRGBPalette16(CRGB::DarkRed, CRGB::Red, CRGB::Orange, CRGB::Yellow)};
-
-const std::map<String, std::vector<CRGB>> ColorPalettes = {
-	{"Pop", {CRGB(0xAAFF00), CRGB(0xFFAA00), CRGB(0xFF00AA), CRGB(0xAA00FF), CRGB(0x00AAFF)}},
-	{"DarkRainbox", {CRGB(0x482344), CRGB(0x2B5166), CRGB(0x429867), CRGB(0xFAB243), CRGB(0xE02130)}},
-	{"Pastel1", {CRGB(0x3FB8AF), CRGB(0x7FC7AF), CRGB(0xDAD8A7), CRGB(0xFF9E9D), CRGB(0xFF3D7F)}},
-	{"Pastel2", {CRGB(0x93DFB8), CRGB(0xFFC8BA), CRGB(0xE3AAD6), CRGB(0xB5D8EB), CRGB(0xFFBDD8)}},
-	{"Pinkish1", {CRGB(0xCD0869), CRGB(0xF24685), CRGB(0xEC509D), CRGB(0xF487AF), CRGB(0xF8BED3)}},
-	{"Pinkish2", {CRGB(0xEB2A73), CRGB(0xFF619A), CRGB(0xFF94BB), CRGB(0xFFC7DB), CRGB(0xFFE8F0)}},
-	{"Girlish1", {CRGB(0x009999), CRGB(0x8E0039), CRGB(0xDB0058), CRGB(0xFF7400), CRGB(0xFFC700)}},
-	{"NightAndDay1", {CRGB(0x029DAF), CRGB(0xE5D599), CRGB(0xFFC219), CRGB(0xF07C19), CRGB(0xE32551)}},
-	{"NightAndDay2", {CRGB(0x75386D), CRGB(0x418592), CRGB(0x2DC0A7), CRGB(0x7EE368), CRGB(0xCEFD47)}},
-	{"Unicorn1", {CRGB(0xEEF6D0), CRGB(0xBF7DB7), CRGB(0x40F9E8), CRGB(0x49C1BB), CRGB(0x85038C)}},
-	{"Unicorn2", {CRGB(0xA697E8), CRGB(0xD2ABEA), CRGB(0xFFBFEB), CRGB(0xFFDFDC), CRGB(0xFFFFCC)}},
-	{"Nature1", {CRGB(0xF6C918), CRGB(0xADAF34), CRGB(0x76B86E), CRGB(0x09A590), CRGB(0x3F2542)}},
-	{"Nature2", {CRGB(0xBF2A23), CRGB(0xA6AD3C), CRGB(0xF0CE4E), CRGB(0xCF872E), CRGB(0x8A211D)}},
-	{"Nature3", {CRGB(0xFCDEBB), CRGB(0xFAC589), CRGB(0xD94709), CRGB(0xA80022), CRGB(0x8C001C)}},
-	{"Ocean1", {CRGB(0x69D2E7), CRGB(0xA7DBD8), CRGB(0xE0E4CC), CRGB(0xF38630), CRGB(0xFA6900)}},
-	{"Ocean2", {CRGB(0xCFF09E), CRGB(0xA8DBA8), CRGB(0x79BD9A), CRGB(0x3B8686), CRGB(0x0B486B)}},
-	{"Ocean3", {CRGB(0xF2E8C4), CRGB(0x98D9B6), CRGB(0x3EC9A7), CRGB(0x2B879E), CRGB(0x616668)}},
-	{"Castle1", {CRGB(0x996C97), CRGB(0x8D8EA3), CRGB(0x99A8AD), CRGB(0xEFBE9E), CRGB(0xF6DFA9)}},
-	{"Castle2", {CRGB(0xF98367), CRGB(0x9BB1C6), CRGB(0xE4E2E3), CRGB(0xCDBFB4), CRGB(0x506678)}},
-	{"Fresh", {CRGB(0xF35C9F), CRGB(0xF3F3F3), CRGB(0x22ADC2), CRGB(0x736F66)}},
-	{"CozyFire1", {CRGB(0x330A04), CRGB(0x6C1305), CRGB(0xB32900), CRGB(0xDE8531), CRGB(0xEFAC41)}},
-	{"CozyFire2", {CRGB(0x992C61), CRGB(0xFF244A), CRGB(0xFF631B), CRGB(0xFFBF1E), CRGB(0xFFF3CF)}},
-	{"GrecianFire", {CRGB(0x604860), CRGB(0x784860), CRGB(0xA86060), CRGB(0xC07860), CRGB(0xF0A848)}}};
-
 enum pattern
 {
 	NONE,
@@ -63,9 +21,9 @@ enum pattern
 enum direction
 {
 	FORWARD,
-	OUTWARD,
 	REVERSE,
-	INWARD
+	//	OUTWARD,
+	//	INWARD
 };
 
 // NeoPattern Class - derived from the Adafruit_NeoPixel class
@@ -76,84 +34,107 @@ class NeoGroup
 #define FADEOUT_DURATION 1000
 #define FADEOUT_STEPS 20
 
+	CRGB *LedFirst;
+
+	unsigned long updateInterval;
+	unsigned long lastUpdate;
+	uint16_t fxStep;
+	uint16_t totalFxSteps;
+	direction fxDirection;
+	int fxFadeOut = 0;
+	bool fxAddGlitter;
+
+	std::vector<CRGB> currentColors = {};
+	CRGBPalette16 colorPalette;
 	uint8_t firePaletteNr = 6;
 
-	int fadeLength = 64;
 	void (NeoGroup::*effectFunc)();
-	CRGB *LedFirst;
-	unsigned long lastUpdate;
 
   public:
-	int GroupID;
+	String GroupID;
 	int LedCount;
-
-	std::vector<CRGB> ActiveColors = {};
-	CRGBPalette16 Colors;
-	bool AddGlitter;
-	uint16_t TotalSteps;
-	uint16_t Index;
-	direction Direction;
-
-	unsigned long Interval;
 	bool Active;
-	int FadeOut = 0;
 
 	// Constructor - calls base-class constructor to initialize strip
-	NeoGroup(int groupID, int ledFirst, int ledLast)
+	NeoGroup(String groupID, int ledFirst, int ledLast)
 	{
 		GroupID = groupID;
 		Active = false;
-		Index = 0;
+		fxStep = 0;
 		LedFirst = &leds[ledFirst];
 		LedCount = (ledLast - ledFirst) + 1;
-		TotalSteps = LedCount;
+		totalFxSteps = LedCount;
 	}
 
-	uint16_t ConfigureEffect(pattern pattern, std::vector<CRGB> colors, uint8_t fps, direction dir = FORWARD, bool addglitter = false)
+	uint16_t ConfigureEffect(
+		pattern pattern,
+		uint8_t fps = 50,
+		direction direction = FORWARD,
+		bool addglitter = false)
 	{
 		Stop();
 
-		Interval = (1000 / fps);
-		Index = 0;
-		Direction = dir;
-		AddGlitter = false;
-		if (colors.size() != 0)
-		{
-			Colors = GenerateRGBPalette(colors);
-		}
-		else
-		{
-			Colors = NULL;
-		}
-		TotalSteps = 256;
+		updateInterval = (1000 / fps);
+		fxStep = 0;
+		fxDirection = direction;
+		fxAddGlitter = false;
+		totalFxSteps = 256;
 
-		if (pattern == RAINBOW)
+		if (pattern == STATIC)
 		{
-			effectFunc = &NeoGroup::Rainbow;
-			AddGlitter = addglitter;
-		}
-		if (pattern == CONFETTI)
-		{
-			effectFunc = &NeoGroup::Confetti;
+			effectFunc = &NeoGroup::FxStatic;
+			fxAddGlitter = addglitter;
+			totalFxSteps = 1;
 		}
 		if (pattern == FADE)
 		{
-			effectFunc = &NeoGroup::Fade;
-			AddGlitter = addglitter;
+			effectFunc = &NeoGroup::FxFade;
+			fxAddGlitter = addglitter;
+		}
+		if (pattern == RAINBOW)
+		{
+			effectFunc = &NeoGroup::FxRainbow;
+			fxAddGlitter = addglitter;
+		}
+		if (pattern == CONFETTI)
+		{
+			effectFunc = &NeoGroup::FxConfetti;
 		}
 		if (pattern == FIRE)
 		{
 			fill_solid(LedFirst, LedCount, 0x000000);
-			Colors = firePalettes[firePaletteNr];
-			effectFunc = &NeoGroup::Fire;
+			effectFunc = &NeoGroup::FxFire;
 		}
-		if (pattern == STATIC)
+		return totalFxSteps;
+	}
+
+	uint16_t ConfigureColors(
+		std::vector<CRGB> colors,
+		bool clearFirst = true,
+		bool generatePalette = true)
+	{
+		if (clearFirst)
 		{
-			effectFunc = &NeoGroup::Static;
-			AddGlitter = addglitter;
-			TotalSteps = 1;
+			currentColors.clear();
 		}
-		return TotalSteps;
+
+		for (CRGB color : colors)
+		{
+			currentColors.push_back(color);
+		}
+
+		if (generatePalette)
+		{
+			if (colors.size() != 0)
+			{
+				colorPalette = GenerateRGBPalette(currentColors);
+			}
+			else
+			{
+				colorPalette = NULL;
+			}
+		}
+		return currentColors.size();
 	}
 
 	void Start()
@@ -165,20 +146,20 @@ class NeoGroup
 	void Stop(bool stopNow = false)
 	{
 		Active = false;
-		FadeOut = (stopNow) ? 0 : FADEOUT_STEPS;
+		fxFadeOut = (stopNow) ? 0 : FADEOUT_STEPS;
 	}
 
 	// Update the pattern
 	void Update()
 	{
-		if (FadeOut > 0)
+		if (fxFadeOut > 0)
 		{
 			if ((millis() - lastUpdate) > (FADEOUT_DURATION / FADEOUT_STEPS))
 			{
 				lastUpdate = millis();
 				fadeToBlackBy(LedFirst, LedCount, FADEOUT_STEPS);
-				FadeOut--;
-				if (FadeOut == 0)
+				fxFadeOut--;
+				if (fxFadeOut == 0)
 				{
 					fill_solid(LedFirst, LedCount, 0x000000);
 				}
@@ -189,94 +170,94 @@ class NeoGroup
 		if (!Active)
 			return;
 
-		if ((millis() - lastUpdate) > Interval)
+		if ((millis() - lastUpdate) > updateInterval)
 		{
 			lastUpdate = millis();
 			if (effectFunc != NULL)
 			{
 				(this->*effectFunc)();
 
-				if (AddGlitter)
+				if (fxAddGlitter)
 				{
-					Glitter();
+					FxGlitter();
 				}
 			}
 		}
 	}
 
-	void Increment(bool invert = false)
+	void NextFxStep(bool invert = false)
 	{
-		if (Direction == FORWARD)
+		if (fxDirection == FORWARD)
 		{
-			Index++;
-			if (Index >= TotalSteps)
+			fxStep++;
+			if (fxStep >= totalFxSteps)
 			{
 				if (invert)
 				{
-					Reverse();
+					ReverseFxDirection();
 				}
 				else
 				{
-					Index = 0;
+					fxStep = 0;
 				}
 			}
 		}
-		else // Direction == REVERSE
+		else // fxDirection == REVERSE
 		{
-			--Index;
-			if (Index < 0)
+			--fxStep;
+			if (fxStep < 0)
 			{
 				if (invert)
 				{
-					Reverse();
+					ReverseFxDirection();
 				}
 				else
 				{
-					Index = TotalSteps - 1;
+					fxStep = totalFxSteps - 1;
 				}
 			}
 		}
 	}
 
 	// Reverse pattern direction
-	void Reverse()
+	void ReverseFxDirection()
 	{
-		if (Direction == FORWARD)
+		if (fxDirection == FORWARD)
 		{
-			Direction = REVERSE;
-			Index = TotalSteps - 1;
+			fxDirection = REVERSE;
+			fxStep = totalFxSteps - 1;
 		}
 		else
 		{
-			Direction = FORWARD;
-			Index = 0;
+			fxDirection = FORWARD;
+			fxStep = 0;
 		}
 	}
 
 	// Update the Static Pattern
-	void Static()
+	void FxStatic()
 	{
-		CRGB newColor = ColorFromPalette(Colors, 0);
+		CRGB newColor = ColorFromPalette(colorPalette, 0);
 		fill_solid(LedFirst, LedCount, newColor);
 		//Stop();
 	}
 
-	void Fade()
+	void FxFade()
 	{
-		CRGB newColor = ColorFromPalette(Colors, Index);
+		CRGB newColor = ColorFromPalette(colorPalette, fxStep);
 		fill_solid(LedFirst, LedCount, newColor);
-		Increment();
+		NextFxStep();
 	}
 
-	void Rainbow()
+	void FxRainbow()
 	{
 		uint8_t rainBowLength = 64;
 		uint8_t deltaHue = rainBowLength > LedCount ? rainBowLength / LedCount : 1;
-		fill_rainbow(LedFirst, LedCount, Index, deltaHue);
-		Increment();
+		fill_rainbow(LedFirst, LedCount, fxStep, deltaHue);
+		NextFxStep();
 	}
 
-	void Glitter(uint8_t chanceOfGlitter = 80)
+	void FxGlitter(uint8_t chanceOfGlitter = 80)
 	{
 		if (random8() < chanceOfGlitter)
 		{
@@ -284,15 +265,15 @@ class NeoGroup
 		}
 	}
 
-	void Confetti()
+	void FxConfetti()
 	{
 		fadeToBlackBy(LedFirst, LedCount, 10);
 		int pos = random16(LedCount);
-		LedFirst[pos] += CHSV(Index + random8(64), 200, 255);
-		Increment();
+		LedFirst[pos] += CHSV(fxStep + random8(64), 200, 255);
+		NextFxStep();
 	}
 
-	void Fire()
+	void FxFire()
 	{
 		// Array of temperature readings at each simulation cell
 		byte heat[LedCount];
@@ -322,17 +303,17 @@ class NeoGroup
 			// Scale the heat value from 0-255 down to 0-240
 			// for best results with color palettes.
 			byte colorindex = scale8(heat[j], 240);
-			CRGB color = ColorFromPalette(Colors, colorindex);
+			CRGB color = ColorFromPalette(colorPalette, colorindex);
 			int dir = (j % 2);
 			int pixelnumber = dir == 0
 								  ? (LedCount / 2) + (j / 2) + 1
 								  : (LedCount / 2) - (j / 2);
 			LedFirst[pixelnumber] = color;
 		}
-		Increment();
+		NextFxStep();
 	}
 
-	CRGBPalette16 GenerateRGBPalette(std::vector<CRGB> colors)
+	static CRGBPalette16 GenerateRGBPalette(std::vector<CRGB> colors)
 	{
 		CRGB nc[16];
 		int colCount = colors.size();
