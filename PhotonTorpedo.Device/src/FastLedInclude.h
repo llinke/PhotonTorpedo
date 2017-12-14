@@ -3,6 +3,7 @@ FASTLED_USING_NAMESPACE
 
 #define PIXEL_PIN D2
 #define PIXEL_COUNT 32
+//#define PIXEL_COUNT 48
 #define PIXEL_TYPE NEOPIXEL
 
 // Static size:

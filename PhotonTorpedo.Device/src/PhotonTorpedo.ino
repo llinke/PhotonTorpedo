@@ -88,6 +88,7 @@ int initStrip(String args)
 	FastLED.show();
 
 	neoGroups.clear();
+
 	// Group 1
 	NeoGroup *neoGroup1 = new NeoGroup(0, 0, (PIXEL_COUNT / 2) - 1);
 	neoGroups.push_back(neoGroup1);
@@ -96,6 +97,21 @@ int initStrip(String args)
 	NeoGroup *neoGroup2 = new NeoGroup(1, (PIXEL_COUNT / 2), PIXEL_COUNT - 1);
 	neoGroups.push_back(neoGroup2);
 	//neoGroups.push_back(NeoGroup(1, (PIXEL_COUNT / 2), PIXEL_COUNT - 1));
+
+	/*
+	// Right Wing
+	NeoGroup *ngRoom1 = new NeoGroup(1, 0, 9);
+	neoGroups.push_back(ngRoom1);
+	// Small Room
+	NeoGroup *ngRoom2 = new NeoGroup(2, 10, 16);
+	neoGroups.push_back(ngRoom2);
+	// Gate
+	NeoGroup *ngRoom3 = new NeoGroup(3, 17, 26);
+	neoGroups.push_back(ngRoom3);
+	// Main Hall
+	NeoGroup *ngRoom4 = new NeoGroup(4, 32, 47);
+	neoGroups.push_back(ngRoom4);
+*/
 
 	pixelCount = PIXEL_COUNT;
 	started = true;
