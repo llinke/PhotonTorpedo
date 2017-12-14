@@ -1,6 +1,8 @@
 #include <FastLED.h>
 FASTLED_USING_NAMESPACE
 
+//#include <ColorPalettes.h>
+
 #define PIXEL_PIN D2
 #define PIXEL_COUNT 32
 //#define PIXEL_COUNT 48

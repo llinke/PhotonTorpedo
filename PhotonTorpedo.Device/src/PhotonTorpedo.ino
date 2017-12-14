@@ -235,10 +235,20 @@ int setFade2(String args)
 	{
 		return -2;
 	}
-
 	NeoGroup *neoGroup = neoGroups.at(grpId);
 
-	std::vector<CRGB> colors =
+	String palKey = "NightAndDay2";
+	if (jsonArgs.containsKey("pal"))
+	{
+		palKey = jsonArgs["pal"];
+	}
+	if (ColorPalettes.find(palKey) == ColorPalettes.end())
+	{
+		return -2;
+	}
+	std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
+	//std::vector<CRGB> colors = ColorPalettes.at(palKey);
+	/*
 		{
 			CRGB(0x0000ff),
 			CRGB(0xffffff),
@@ -246,6 +256,7 @@ int setFade2(String args)
 			CRGB(0xffffff),
 			CRGB(0xff0000),
 			CRGB(0xffffff)};
+	*/
 	neoGroup->Stop();
 	uint16_t result = neoGroup->ConfigureEffect(FADE, colors, 50, FORWARD);
 	neoGroup->Start();
@@ -268,14 +279,26 @@ int setFade3(String args)
 	{
 		return -2;
 	}
-
 	NeoGroup *neoGroup = neoGroups.at(grpId);
 
-	std::vector<CRGB> colors =
+	String palKey = "Unicorn2";
+	if (jsonArgs.containsKey("pal"))
+	{
+		palKey = jsonArgs["pal"];
+	}
+	if (ColorPalettes.find(palKey) == ColorPalettes.end())
+	{
+		return -2;
+	}
+	std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
+	//std::vector<CRGB> colors = ColorPalettes.at(palKey);
+	/*
 		{
 			CRGB(0x0000ff),
 			CRGB(0x00ff00),
 			CRGB(0xff0000)};
+	*/
+
 	neoGroup->Stop();
 	uint16_t result = neoGroup->ConfigureEffect(FADE, colors, 50, FORWARD, true);
 	neoGroup->Start();
