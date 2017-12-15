@@ -13,9 +13,9 @@ enum pattern
 {
 	NONE,
 	STATIC,
+	FADE,
 	RAINBOW,
 	CONFETTI,
-	FADE,
 	FIRE
 };
 enum direction
@@ -68,42 +68,41 @@ class NeoGroup
 
 	uint16_t ConfigureEffect(
 		pattern pattern,
+		bool addglitter = false,
 		uint8_t fps = 50,
-		direction direction = FORWARD,
-		bool addglitter = false)
+		direction direction = FORWARD)
 	{
 		Stop();
 
 		updateInterval = (1000 / fps);
 		fxStep = 0;
 		fxDirection = direction;
-		fxAddGlitter = false;
+		fxAddGlitter = addglitter;
 		totalFxSteps = 256;
 
 		if (pattern == STATIC)
 		{
 			effectFunc = &NeoGroup::FxStatic;
-			fxAddGlitter = addglitter;
 			totalFxSteps = 1;
 		}
 		if (pattern == FADE)
 		{
 			effectFunc = &NeoGroup::FxFade;
-			fxAddGlitter = addglitter;
 		}
 		if (pattern == RAINBOW)
 		{
 			effectFunc = &NeoGroup::FxRainbow;
-			fxAddGlitter = addglitter;
 		}
 		if (pattern == CONFETTI)
 		{
 			effectFunc = &NeoGroup::FxConfetti;
+			fxAddGlitter = false;
 		}
 		if (pattern == FIRE)
 		{
 			fill_solid(LedFirst, LedCount, 0x000000);
 			effectFunc = &NeoGroup::FxFire;
+			fxAddGlitter = false;
 		}
 		return totalFxSteps;
 	}

@@ -13,6 +13,8 @@
 
 SYSTEM_MODE(AUTOMATIC);
 
+#define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
+
 // Static size
 //struct CRGB leds[PIXEL_COUNT];
 // Dynamic size:
@@ -32,7 +34,11 @@ void setup()
 	Particle.function("initStrip", initStrip);
 	Particle.function("startStrip", startStrip);
 	Particle.function("stopStrip", stopStrip);
+
 	Particle.function("addGroup", stopStrip);
+
+	Particle.function("setEffect", setEffect);
+	Particle.function("setColors", setColors);
 
 	Particle.variable("countLeds", pixelCount);
 	Particle.variable("countGroups", groupCount);
@@ -157,7 +163,7 @@ int addGroup(String args)
 	return addGroup(grpId, ledFirst, ledCount);
 }
 
-int setFade2(String args)
+int setEffect(String args)
 {
 	JsonObject &jsonArgs = parseArgs(args);
 	if (!jsonArgs.success())
@@ -169,32 +175,88 @@ int setFade2(String args)
 		return -2;
 	}
 	NeoGroup *neoGroup = neoGroups.at(grpNr);
+	neoGroup->Stop();
+	String fxName = (jsonArgs.containsKey("fx")) ? jsonArgs["fx"] : "";
+	pattern fxPattern = pattern::NONE;
+	if (fxName == "static")
+		fxPattern = pattern::STATIC;
+	if (fxName == "rainbow")
+		fxPattern = pattern::RAINBOW;
+	if (fxName == "confetti")
+		fxPattern = pattern::CONFETTI;
+	if (fxName == "fade")
+		fxPattern = pattern::FADE;
+	if (fxName == "fire")
+		fxPattern = pattern::FIRE;
+	bool fxGlitter = (jsonArgs.containsKey("glt")) ? jsonArgs["glt"] : false;
+	int fxFps = (jsonArgs.containsKey("fps")) ? jsonArgs["fps"] : 50;
+	String parmDir = (jsonArgs.containsKey("dir")) ? jsonArgs["dir"] : "f";
+	direction fxDir = direction::FORWARD;
+	if (parmDir == "f")
+		fxDir = direction::FORWARD;
+	if (parmDir == "r")
+		fxDir = direction::REVERSE;
+	/*
+	uint16_t ConfigureEffect(
+		pattern pattern,
+		bool addglitter = false,
+		uint8_t fps = 50,
+		direction direction = FORWARD)
+	*/
+	uint16_t result = neoGroup->ConfigureEffect(fxPattern, fxGlitter, fxFps, fxDir);
+	neoGroup->Start();
+	return result;
+}
 
-	String palKey = "NightAndDay2";
-	if (jsonArgs.containsKey("pal"))
-	{
-		palKey = jsonArgs["pal"];
-	}
-	if (ColorPalettes.find(palKey) == ColorPalettes.end())
+int setColors(String args)
+{
+	JsonObject &jsonArgs = parseArgs(args);
+	if (!jsonArgs.success())
+		if (!jsonArgs.success())
+			return -1;
+	int grpNr = (jsonArgs.containsKey("grp")) ? jsonArgs["grp"] : -1;
+	if (grpNr < 0 || grpNr >= neoGroups.size())
 	{
 		return -2;
 	}
-	std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
-	//std::vector<CRGB> colors = ColorPalettes.at(palKey);
-	/*
+	NeoGroup *neoGroup = neoGroups.at(grpNr);
+	//neoGroup->Stop();
+
+	String palKey = "";
+	bool clearFirst = true;
+	bool genPalette = true;
+	if (jsonArgs.containsKey("pal"))
+	{
+		//String palKey = jsonArgs["pal"].as<String>();
+		String palKey = (jsonArgs.containsKey("pal")) ? jsonArgs["pal"] : "";
+		if (ColorPalettes.find(palKey) == ColorPalettes.end())
 		{
-			CRGB(0x0000ff),
-			CRGB(0xffffff),
-			CRGB(0x00ff00),
-			CRGB(0xffffff),
-			CRGB(0xff0000),
-			CRGB(0xffffff)};
-	*/
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(FADE, 50, FORWARD);
-	neoGroup->ConfigureColors(colors);
-	neoGroup->Start();
-	return result;
+			return -2;
+		}
+		std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
+
+		uint16_t result = neoGroup->ConfigureColors(colors, clearFirst, genPalette);
+		//neoGroup->Start();
+		return result;
+	}
+	else
+	{
+		bool clearFirst = (jsonArgs.containsKey("clr")) ? jsonArgs["clr"] : true;
+		bool genPalette = (jsonArgs.containsKey("gen")) ? jsonArgs["gen"] : true;
+		std::vector<CRGB> colors = {};
+		JsonArray &colorsArray = jsonArgs["cols"];
+		if (colorsArray != JsonArray::invalid())
+		{
+			for (int c = 0; c < colorsArray.size(); c++)
+			{
+				uint32_t colVal = colorsArray[c];
+				colors.push_back(CRGB(colVal));
+			}
+		}
+		uint16_t result = neoGroup->ConfigureColors(colors, clearFirst, genPalette);
+		//neoGroup->Start();
+		return result;
+	}
 }
 
 // Main loop
