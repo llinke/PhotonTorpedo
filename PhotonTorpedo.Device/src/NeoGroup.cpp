@@ -56,13 +56,13 @@ class NeoGroup
 	bool Active;
 
 	// Constructor - calls base-class constructor to initialize strip
-	NeoGroup(String groupID, int ledFirst, int ledLast)
+	NeoGroup(String groupID, int ledFirst, int ledCount)
 	{
 		GroupID = groupID;
 		Active = false;
 		fxStep = 0;
 		LedFirst = &leds[ledFirst];
-		LedCount = (ledLast - ledFirst) + 1;
+		LedCount = ledCount;
 		totalFxSteps = LedCount;
 	}
 

@@ -2,5 +2,5 @@
     // Format a file on save. A formatter must be available, the file must not be auto-saved, and editor must not be shutting down.
     "editor.formatOnSave": true,
     // The verbosity of logging in the Output Panel. The order of levels from least verbose to most verbose is: None < Error < Warning < Information.
-    "C_Cpp.loggingLevel": "Error",
+    "C_Cpp.loggingLevel": "Error"
 }

@@ -30,17 +30,9 @@ int groupCount = 0;
 void setup()
 {
 	Particle.function("initStrip", initStrip);
+	Particle.function("startStrip", startStrip);
 	Particle.function("stopStrip", stopStrip);
-
-	Particle.function("setStatic", setStatic);
-	Particle.function("setStatic2", setStatic2);
-	Particle.function("setFade", setFade);
-	Particle.function("setFade2", setFade2);
-	Particle.function("setFade3", setFade3);
-	Particle.function("setRainbow", setRainbow);
-	Particle.function("setRainbow2", setRainbow2);
-	Particle.function("setConfetti", setConfetti);
-	Particle.function("setFire", setFire);
+	Particle.function("addGroup", stopStrip);
 
 	Particle.variable("countLeds", pixelCount);
 	Particle.variable("countGroups", groupCount);
@@ -56,72 +48,73 @@ JsonObject &parseArgs(String args)
 	return jsonBuffer.parseObject(argsbuf);
 }
 
-int initStrip(String args)
+int initStrip(int ledCount, bool doStart = true, bool playDemo = true)
 {
 	if (initialized)
 	{
-		started = true;
-		return pixelCount;
+		return doStart ? startStrip("") : pixelCount;
 	}
 
-	leds = (struct CRGB *)malloc(PIXEL_COUNT * sizeof(struct CRGB));
-	FastLED.addLeds<PIXEL_TYPE, PIXEL_PIN>(leds, PIXEL_COUNT);
+	leds = (struct CRGB *)malloc(ledCount * sizeof(struct CRGB));
+	FastLED.addLeds<PIXEL_TYPE, PIXEL_PIN>(leds, ledCount);
 	//FastLED.setMaxPowerInVoltsAndMilliamps(5,3000);
 	FastLED.setBrightness(64);
 	FastLED.clear(true);
 	FastLED.show();
 
-	// TEST
-	for (int dot = 0; dot < PIXEL_COUNT; dot++)
+	if (playDemo)
 	{
-		leds[dot] = CHSV(random8(), 255, 255);
+		for (int dot = 0; dot < ledCount; dot++)
+		{
+			leds[dot] = CHSV(random8(), 255, 255);
+			FastLED.show();
+			delay(10);
+		}
+		delay(500);
+		for (int dot = 0; dot < 20; dot++)
+		{
+			fadeToBlackBy(leds, ledCount, 20);
+			FastLED.show();
+			delay(50);
+		}
+		FastLED.clear(true);
 		FastLED.show();
-		delay(10);
 	}
-	delay(500);
-	for (int dot = 0; dot < 20; dot++)
-	{
-		fadeToBlackBy(leds, PIXEL_COUNT, 20);
-		FastLED.show();
-		delay(50);
-	}
-	FastLED.clear(true);
-	FastLED.show();
 
 	neoGroups.clear();
-
-	/*
 	// Group 0: all LEDs
-	NeoGroup *neoGroup0 = new NeoGroup("AllLEDs", 0, PIXEL_COUNT - 1);
-	neoGroups.push_back(neoGroup0);
-	*/
-	// Group 1
-	NeoGroup *neoGroup1 = new NeoGroup("Room 1", 0, (PIXEL_COUNT / 2) - 1);
-	neoGroups.push_back(neoGroup1);
-	//neoGroups.push_back(NeoGroup(0, 0, (PIXEL_COUNT / 2) - 1));
-	// Group 2
-	NeoGroup *neoGroup2 = new NeoGroup("Room 1", (PIXEL_COUNT / 2), PIXEL_COUNT - 1);
-	neoGroups.push_back(neoGroup2);
-	//neoGroups.push_back(NeoGroup(1, (PIXEL_COUNT / 2), PIXEL_COUNT - 1));
-
+	addGroup("All LEDs", 0, pixelCount);
 	/*
 	// Right Wing
-	NeoGroup *ngRoom1 = new NeoGroup(1, 0, 9);
-	neoGroups.push_back(ngRoom1);
+	addGroup("Right Wing", 0, 9);
 	// Small Room
-	NeoGroup *ngRoom2 = new NeoGroup(2, 10, 16);
-	neoGroups.push_back(ngRoom2);
+	addGroup("Small Room", 10, 16);
 	// Gate
-	NeoGroup *ngRoom3 = new NeoGroup(3, 17, 26);
-	neoGroups.push_back(ngRoom3);
+	addGroup("Gate", 17, 26);
 	// Main Hall
-	NeoGroup *ngRoom4 = new NeoGroup(4, 32, 47);
-	neoGroups.push_back(ngRoom4);
-*/
+	addGroup("Main Hall", 32, 47);
+	*/
 
-	pixelCount = PIXEL_COUNT;
-	started = true;
+	pixelCount = ledCount;
 	initialized = true;
+	return doStart ? startStrip("") : pixelCount;
+}
+
+int initStrip(String args)
+{
+	JsonObject &jsonArgs = parseArgs(args);
+	if (!jsonArgs.success())
+		return -1; // Invalid JSon arguments
+	int ledCount = (jsonArgs.containsKey("ledC")) ? jsonArgs["ledC"] : 0;
+	return initStrip(ledCount);
+}
+
+int startStrip(String args)
+{
+	if (!initialized)
+		return -1;
+
+	started = true;
 	return pixelCount;
 }
 
@@ -141,110 +134,41 @@ int stopStrip(String args)
 	return 0;
 }
 
-int setStatic(String args)
+int addGroup(String grpId, int ledFirst, int ledCount)
 {
-	JsonObject &jsonArgs = parseArgs(args);
-	if (!jsonArgs.success())
-	{
-		return -1;
-	}
-	int grpId = -1;
-	if (jsonArgs.containsKey("grp"))
-	{
-		grpId = jsonArgs["grp"];
-	}
-	if (grpId < 0 || grpId >= neoGroups.size())
-	{
-		return -2;
-	}
+	if ((ledFirst >= pixelCount) ||
+		(ledCount <= 0) ||
+		(ledFirst + ledCount) >= pixelCount)
+		return -2; // Invalid parameter
 
-	NeoGroup *neoGroup = neoGroups.at(grpId);
-
-	std::vector<CRGB> colors = {CRGB(0x007f7f)};
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(STATIC, 50, FORWARD, false);
-	neoGroup->ConfigureColors(colors);
-	neoGroup->Start();
-	//return neoGroup->LedLast - neoGroup->LedFirst + 1;
-	return result;
+	NeoGroup *newGroup = new NeoGroup(grpId, ledFirst, ledCount);
+	neoGroups.push_back(newGroup);
+	return neoGroups.size();
 }
 
-int setStatic2(String args)
+int addGroup(String args)
 {
 	JsonObject &jsonArgs = parseArgs(args);
 	if (!jsonArgs.success())
-	{
-		return -1;
-	}
-	int grpId = -1;
-	if (jsonArgs.containsKey("grp"))
-	{
-		grpId = jsonArgs["grp"];
-	}
-	if (grpId < 0 || grpId >= neoGroups.size())
-	{
-		return -2;
-	}
-
-	NeoGroup *neoGroup = neoGroups.at(grpId);
-
-	std::vector<CRGB> colors = {CRGB(0x007f7f)};
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(STATIC, 50, FORWARD, true);
-	neoGroup->ConfigureColors(colors);
-	neoGroup->Start();
-	//return neoGroup->LedLast - neoGroup->LedFirst + 1;
-	return result;
-}
-
-int setFade(String args)
-{
-	JsonObject &jsonArgs = parseArgs(args);
-	if (!jsonArgs.success())
-	{
-		return -1;
-	}
-	int grpId = -1;
-	if (jsonArgs.containsKey("grp"))
-	{
-		grpId = jsonArgs["grp"];
-	}
-	if (grpId < 0 || grpId >= neoGroups.size())
-	{
-		return -2;
-	}
-
-	NeoGroup *neoGroup = neoGroups.at(grpId);
-
-	std::vector<CRGB> colors =
-		{
-			CRGB(0x0000ff),
-			CRGB(0x00ff00),
-			CRGB(0xff0000)};
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(FADE, 50, FORWARD);
-	neoGroup->ConfigureColors(colors);
-	neoGroup->Start();
-	return result;
+		return -1; // Invalid JSon arguments
+	String grpId = (jsonArgs.containsKey("id")) ? jsonArgs["id"] : "";
+	int ledFirst = (jsonArgs.containsKey("ledF")) ? jsonArgs["ledF"] : 0;
+	int ledCount = (jsonArgs.containsKey("ledC")) ? jsonArgs["ledC"] : 0;
+	return addGroup(grpId, ledFirst, ledCount);
 }
 
 int setFade2(String args)
 {
 	JsonObject &jsonArgs = parseArgs(args);
 	if (!jsonArgs.success())
-	{
-		return -1;
-	}
-	int grpId = -1;
-	if (jsonArgs.containsKey("grp"))
-	{
-		grpId = jsonArgs["grp"];
-	}
-	if (grpId < 0 || grpId >= neoGroups.size())
+		if (!jsonArgs.success())
+			return -1;
+	int grpNr = (jsonArgs.containsKey("grp")) ? jsonArgs["grp"] : -1;
+	if (grpNr < 0 || grpNr >= neoGroups.size())
 	{
 		return -2;
 	}
-	NeoGroup *neoGroup = neoGroups.at(grpId);
+	NeoGroup *neoGroup = neoGroups.at(grpNr);
 
 	String palKey = "NightAndDay2";
 	if (jsonArgs.containsKey("pal"))
@@ -268,166 +192,6 @@ int setFade2(String args)
 	*/
 	neoGroup->Stop();
 	uint16_t result = neoGroup->ConfigureEffect(FADE, 50, FORWARD);
-	neoGroup->ConfigureColors(colors);
-	neoGroup->Start();
-	return result;
-}
-
-int setFade3(String args)
-{
-	JsonObject &jsonArgs = parseArgs(args);
-	if (!jsonArgs.success())
-	{
-		return -1;
-	}
-	int grpId = -1;
-	if (jsonArgs.containsKey("grp"))
-	{
-		grpId = jsonArgs["grp"];
-	}
-	if (grpId < 0 || grpId >= neoGroups.size())
-	{
-		return -2;
-	}
-	NeoGroup *neoGroup = neoGroups.at(grpId);
-
-	String palKey = "Unicorn2";
-	if (jsonArgs.containsKey("pal"))
-	{
-		palKey = jsonArgs["pal"];
-	}
-	if (ColorPalettes.find(palKey) == ColorPalettes.end())
-	{
-		return -2;
-	}
-	std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
-	//std::vector<CRGB> colors = ColorPalettes.at(palKey);
-	/*
-		{
-			CRGB(0x0000ff),
-			CRGB(0x00ff00),
-			CRGB(0xff0000)};
-	*/
-
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(FADE, 50, FORWARD, true);
-	neoGroup->ConfigureColors(colors);
-	neoGroup->Start();
-	return result;
-}
-
-int setRainbow(String args)
-{
-	JsonObject &jsonArgs = parseArgs(args);
-	if (!jsonArgs.success())
-	{
-		return -1;
-	}
-	int grpId = -1;
-	if (jsonArgs.containsKey("grp"))
-	{
-		grpId = jsonArgs["grp"];
-	}
-	if (grpId < 0 || grpId >= neoGroups.size())
-	{
-		return -2;
-	}
-
-	NeoGroup *neoGroup = neoGroups.at(grpId);
-
-	std::vector<CRGB> colors = {};
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(RAINBOW, 50, FORWARD, false);
-	neoGroup->ConfigureColors(colors);
-	neoGroup->Start();
-	return result;
-}
-
-int setRainbow2(String args)
-{
-	JsonObject &jsonArgs = parseArgs(args);
-	if (!jsonArgs.success())
-	{
-		return -1;
-	}
-	int grpId = -1;
-	if (jsonArgs.containsKey("grp"))
-	{
-		grpId = jsonArgs["grp"];
-	}
-	if (grpId < 0 || grpId >= neoGroups.size())
-	{
-		return -2;
-	}
-
-	NeoGroup *neoGroup = neoGroups.at(grpId);
-
-	std::vector<CRGB> colors = {};
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(RAINBOW, 50, FORWARD, true);
-	neoGroup->ConfigureColors(colors); // Not required
-	neoGroup->Start();
-	return result;
-}
-
-int setConfetti(String args)
-{
-	JsonObject &jsonArgs = parseArgs(args);
-	if (!jsonArgs.success())
-	{
-		return -1;
-	}
-	int grpId = -1;
-	if (jsonArgs.containsKey("grp"))
-	{
-		grpId = jsonArgs["grp"];
-	}
-	if (grpId < 0 || grpId >= neoGroups.size())
-	{
-		return -2;
-	}
-
-	NeoGroup *neoGroup = neoGroups.at(grpId);
-
-	std::vector<CRGB> colors = {};
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(CONFETTI, 25, FORWARD);
-	neoGroup->ConfigureColors(colors);
-	neoGroup->Start();
-	return result;
-}
-
-int setFire(String args)
-{
-	JsonObject &jsonArgs = parseArgs(args);
-	if (!jsonArgs.success())
-	{
-		return -1;
-	}
-	int grpId = -1;
-	if (jsonArgs.containsKey("grp"))
-	{
-		grpId = jsonArgs["grp"];
-	}
-	if (grpId < 0 || grpId >= neoGroups.size())
-	{
-		return -2;
-	}
-	NeoGroup *neoGroup = neoGroups.at(grpId);
-
-	String palKey = "Fire6";
-	if (jsonArgs.containsKey("pal"))
-	{
-		palKey = jsonArgs["pal"];
-	}
-	if (ColorPalettes.find(palKey) == ColorPalettes.end())
-	{
-		return -2;
-	}
-	std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
-
-	neoGroup->Stop();
-	uint16_t result = neoGroup->ConfigureEffect(FIRE, 50, FORWARD);
 	neoGroup->ConfigureColors(colors);
 	neoGroup->Start();
 	return result;
