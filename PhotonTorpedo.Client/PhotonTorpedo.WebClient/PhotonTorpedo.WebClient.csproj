@@ -8,4 +8,14 @@
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PhotonTorpedo.Configuration\PhotonTorpedo.Configuration.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="ClientSettings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+    </None>
+  </ItemGroup>
+
 </Project>

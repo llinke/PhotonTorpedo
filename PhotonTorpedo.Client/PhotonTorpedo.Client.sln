@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2009
+VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotonTorpedo.CmdLine", "PhotonTorpedo.CmdLine\PhotonTorpedo.CmdLine.csproj", "{3C3FD3C8-9A12-4F41-A6A9-2EC3151C0993}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotonTorpedo.WebClient", "PhotonTorpedo.WebClient\PhotonTorpedo.WebClient.csproj", "{0D6C425D-2BDD-4836-B16D-76C59C50E787}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PhotonTorpedo.WebClient", "PhotonTorpedo.WebClient\PhotonTorpedo.WebClient.csproj", "{0D6C425D-2BDD-4836-B16D-76C59C50E787}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotonTorpedo.Configuration", "PhotonTorpedo.Configuration\PhotonTorpedo.Configuration.csproj", "{A49B4939-982D-4208-B9D9-544A975B32A1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{0D6C425D-2BDD-4836-B16D-76C59C50E787}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0D6C425D-2BDD-4836-B16D-76C59C50E787}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0D6C425D-2BDD-4836-B16D-76C59C50E787}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A49B4939-982D-4208-B9D9-544A975B32A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A49B4939-982D-4208-B9D9-544A975B32A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A49B4939-982D-4208-B9D9-544A975B32A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A49B4939-982D-4208-B9D9-544A975B32A1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,12 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="PhotonTorpedo.WebClient" GeneratedClassName="ClientSettings">
+  <Profiles />
+  <Settings>
+    <Setting Name="particleAccessToken" Type="System.String" Scope="User">
+      <Value Profile="(Default)">e1f839239e589515e0c25ccd51e2b41cfa142325</Value>
+    </Setting>
+    <Setting Name="particleDeviceId" Type="System.String" Scope="User">
+      <Value Profile="(Default)">240025001047343438323536</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

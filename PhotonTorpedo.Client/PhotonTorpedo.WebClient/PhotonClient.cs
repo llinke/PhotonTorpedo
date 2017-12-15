@@ -1,57 +1,110 @@
-﻿using System;
+﻿#define UseSendAsync
+#if !UseSendAsync
+#define UseSendAsJson
+#endif
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using PhotonTorpedo.Configuration;
 
 namespace PhotonTorpedo.WebClient
 {
     public class PhotonClient
     {
-        public enum Pattern
+        private Uri CreateUriFromMethod(string functionName, bool withToken = false)
         {
-            NONE,
-            RAINBOW_CYCLE,
-            THEATER_CHASE,
-            COLOR_WIPE,
-            SCANNER,
-            FADE
-        };
-
-        string accessToken = "e1f839239e589515e0c25ccd51e2b41cfa142325"; //This is your Particle Cloud Access Token
-        string deviceId = "240025001047343438323536"; //This is your Particle Device Id
-        string particleFunc = "changeMode"; //This is the name of your Particle Function
-        string particleApiUrl = "https://api.particle.io/";
-
-        public async Task SetPatternRainbow(byte interval)
-        {
-            await SendDataAsync(
-                new Dictionary<string, string>
-                {
-                    { "pattern", Pattern.RAINBOW_CYCLE.ToString() },
-                    { "interval", interval.ToString() }
-                }
-                );
+            //https://api.particle.io/v1/devices/mydevice/wakeup?access_token=1234
+            return withToken
+                ? new Uri($"{ConfigurationManager.ParticleApiUrl}/v1/devices/{ConfigurationManager.DeviceId}/{functionName}?access_token={ConfigurationManager.AccessToken}")
+                : new Uri($"{ConfigurationManager.ParticleApiUrl}/v1/devices/{ConfigurationManager.DeviceId}/{functionName}");
         }
 
-        protected Task<HttpResponseMessage> SendDataAsync(Dictionary<string, string> data = null)
+        public async Task<string> PostDataAsync(IApiFunction data = null)
         {
-            HttpClient client = new HttpClient
+#if UseSendAsync
+            var request = new HttpRequestMessage(HttpMethod.Post, CreateUriFromMethod(data.FunctionName, false));
+            if (data != null)
             {
-                BaseAddress = new Uri(particleApiUrl)
-            };
-
-            var apiParams = new List<KeyValuePair<string, string>>();
-            apiParams.Add(new KeyValuePair<string, string>("access_token", accessToken));
-            foreach (var dataVal in data)
-            {
-                apiParams.Add(new KeyValuePair<string, string>(dataVal.Key, dataVal.Value));
+                var apiParams = new List<KeyValuePair<string, string>>();
+                apiParams.Add(new KeyValuePair<string, string>("access_token", ConfigurationManager.AccessToken));
+                apiParams.Add(new KeyValuePair<string, string>("arg", data.GetJsonString()));
+                request.Content = new FormUrlEncodedContent(apiParams);
             }
+            return await SendAsync(request);
+#else
+#if UseSendAsJson
+            return await PostDataAsyncAsJson(data);
+#else
+            using (HttpClient client = new HttpClient())
+            {
+                client.BaseAddress = new Uri(ConfigurationManager.ParticleApiUrl);
+                client.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue() { NoCache = true };
 
-            var content = new FormUrlEncodedContent(apiParams);
-            return client.PostAsync("v1/devices/" + deviceId + "/" + particleFunc, content);
+                var apiParams = new List<KeyValuePair<string, string>>();
+                apiParams.Add(new KeyValuePair<string, string>("access_token", ConfigurationManager.AccessToken));
+                apiParams.Add(new KeyValuePair<string, string>("arg", data.GetJsonString()));
+                var content = new FormUrlEncodedContent(apiParams);
+
+                var response = await client.PostAsync("v1/devices/" + ConfigurationManager.DeviceId + "/" + data.FunctionName, content);
+                return await response.Content.ReadAsStringAsync();
+            }
+#endif
+#endif
         }
+
+#if UseSendAsync
+        private async Task<string> SendAsync(HttpRequestMessage request)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                //if (sendAuthHeader)
+                //    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{OAuthClientId}:{OAuthClientSecret}")));
+
+                client.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue() { NoCache = true };
+                var response = await client.SendAsync(request);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.OK:
+                    case HttpStatusCode.Created:
+                        return responseContent;
+
+                    case HttpStatusCode.Unauthorized:
+                        throw new ParticleUnauthorizedException(responseContent);
+
+                    case HttpStatusCode.NotFound:
+                        throw new ParticleNotFoundException(responseContent);
+
+                    case HttpStatusCode.BadRequest:
+                        throw new ParticleRequestBadRequestException(responseContent);
+
+                    default:
+                        throw new Exception();
+                }
+
+            }
+        }
+#endif
+
+#if UseSendAsJson
+        private  async Task<string> PostDataAsyncAsJson(IApiFunction data = null)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var response = await client.PostAsync(
+                    CreateUriFromMethod(data.FunctionName),
+                    new StringContent(
+                        data.GetJsonString(),
+                        Encoding.UTF8,
+                        "application/json"));
+                return await response.Content.ReadAsStringAsync();
+            }
+        }
+#endif
     }
 }

@@ -52,6 +52,7 @@ void setup()
 	Particle.variable("isStarted", started);
 }
 
+/*
 JsonObject &parseArgs(String args)
 {
 	StaticJsonBuffer<200> jsonBuffer;
@@ -60,8 +61,9 @@ JsonObject &parseArgs(String args)
 	//JsonObject& jsonArgs =
 	return jsonBuffer.parseObject(argsbuf);
 }
+*/
 
-int initStripInternal(int ledCount, bool doStart = true, bool playDemo = true)
+int initStripInternal(int ledCount, bool doStart = false, bool playDemo = true)
 {
 	if (initialized)
 	{
@@ -84,7 +86,7 @@ int initStripInternal(int ledCount, bool doStart = true, bool playDemo = true)
 			delay(10);
 		}
 		delay(500);
-		for (int dot = 0; dot < 20; dot++)
+		for (int fade = 0; fade < 20; fade++)
 		{
 			fadeToBlackBy(leds, ledCount, 20);
 			FastLED.show();
@@ -93,6 +95,9 @@ int initStripInternal(int ledCount, bool doStart = true, bool playDemo = true)
 		FastLED.clear(true);
 		FastLED.show();
 	}
+
+	pixelCount = ledCount;
+	initialized = true;
 
 	neoGroups.clear();
 	// Group 0: all LEDs
@@ -108,14 +113,17 @@ int initStripInternal(int ledCount, bool doStart = true, bool playDemo = true)
 	addGroupInternal("Main Hall", 32, 47);
 	*/
 
-	pixelCount = ledCount;
-	initialized = true;
 	return doStart ? startStrip("") : pixelCount;
 }
 
 int initStrip(String args)
 {
-	JsonObject &jsonArgs = parseArgs(args);
+	//JsonObject &jsonArgs = parseArgs(args);
+	StaticJsonBuffer<200> jsonBuffer;
+	char argsbuf[args.length() + 1];
+	args.toCharArray(argsbuf, args.length() + 1);
+	JsonObject &jsonArgs = jsonBuffer.parseObject(argsbuf);
+
 	if (!jsonArgs.success())
 		return -1; // Invalid JSon arguments
 	int ledCount = (jsonArgs.containsKey("ledC")) ? jsonArgs["ledC"] : 0;
@@ -151,8 +159,8 @@ int addGroupInternal(String grpId, int ledFirst, int ledCount)
 {
 	if ((ledFirst >= pixelCount) ||
 		(ledCount <= 0) ||
-		(ledFirst + ledCount) >= pixelCount)
-		return -2; // Invalid parameter
+		(ledFirst + ledCount) > pixelCount)
+		return -((((3 * 1000) + ledFirst) * 1000) + ledCount); // Invalid parameter
 
 	NeoGroup *newGroup = new NeoGroup(grpId, ledFirst, ledCount);
 	neoGroups.push_back(newGroup);
@@ -161,56 +169,80 @@ int addGroupInternal(String grpId, int ledFirst, int ledCount)
 
 int addGroup(String args)
 {
-	JsonObject &jsonArgs = parseArgs(args);
+	//JsonObject &jsonArgs = parseArgs(args);
+	StaticJsonBuffer<200> jsonBuffer;
+	char argsbuf[args.length() + 1];
+	args.toCharArray(argsbuf, args.length() + 1);
+	JsonObject &jsonArgs = jsonBuffer.parseObject(argsbuf);
+
 	if (!jsonArgs.success())
 		return -1; // Invalid JSon arguments
 	String grpId = (jsonArgs.containsKey("id")) ? jsonArgs["id"] : "";
-	int ledFirst = (jsonArgs.containsKey("ledF")) ? jsonArgs["ledF"] : 0;
-	int ledCount = (jsonArgs.containsKey("ledC")) ? jsonArgs["ledC"] : 0;
+	//int ledFirst = (jsonArgs.containsKey("ledF")) ? jsonArgs["ledF"] : -1;
+	//int ledCount = (jsonArgs.containsKey("ledC")) ? jsonArgs["ledC"] : -1;
+	int ledFirst = jsonArgs.at("ledF");
+	int ledCount = jsonArgs.at("ledC");
 	return addGroupInternal(grpId, ledFirst, ledCount);
 }
 
 int startGroup(String args)
 {
-	JsonObject &jsonArgs = parseArgs(args);
+	//JsonObject &jsonArgs = parseArgs(args);
+	StaticJsonBuffer<200> jsonBuffer;
+	char argsbuf[args.length() + 1];
+	args.toCharArray(argsbuf, args.length() + 1);
+	JsonObject &jsonArgs = jsonBuffer.parseObject(argsbuf);
+
 	if (!jsonArgs.success())
 		if (!jsonArgs.success())
 			return -1;
 	int grpNr = (jsonArgs.containsKey("grp")) ? jsonArgs["grp"] : -1;
 	if (grpNr < 0 || grpNr >= neoGroups.size())
 	{
-		return -2;
+		return -((((2 * 1000) + grpNr) * 1000) + neoGroups.size()); // Invalid parameter
 	}
 	NeoGroup *neoGroup = neoGroups.at(grpNr);
 	neoGroup->Start();
+	return 0;
 }
 
 int stopGroup(String args)
 {
-	JsonObject &jsonArgs = parseArgs(args);
+	//JsonObject &jsonArgs = parseArgs(args);
+	StaticJsonBuffer<200> jsonBuffer;
+	char argsbuf[args.length() + 1];
+	args.toCharArray(argsbuf, args.length() + 1);
+	JsonObject &jsonArgs = jsonBuffer.parseObject(argsbuf);
+
 	if (!jsonArgs.success())
 		if (!jsonArgs.success())
 			return -1;
 	int grpNr = (jsonArgs.containsKey("grp")) ? jsonArgs["grp"] : -1;
 	if (grpNr < 0 || grpNr >= neoGroups.size())
 	{
-		return -2;
+		return -((((2 * 1000) + grpNr) * 1000) + neoGroups.size()); // Invalid parameter
 	}
 	bool stopNow = (jsonArgs.containsKey("now")) ? jsonArgs["now"] : false;
 	NeoGroup *neoGroup = neoGroups.at(grpNr);
 	neoGroup->Stop(stopNow);
+	return 0;
 }
 
 int setEffect(String args)
 {
-	JsonObject &jsonArgs = parseArgs(args);
+	//JsonObject &jsonArgs = parseArgs(args);
+	StaticJsonBuffer<200> jsonBuffer;
+	char argsbuf[args.length() + 1];
+	args.toCharArray(argsbuf, args.length() + 1);
+	JsonObject &jsonArgs = jsonBuffer.parseObject(argsbuf);
+
 	if (!jsonArgs.success())
 		if (!jsonArgs.success())
 			return -1;
 	int grpNr = (jsonArgs.containsKey("grp")) ? jsonArgs["grp"] : -1;
 	if (grpNr < 0 || grpNr >= neoGroups.size())
 	{
-		return -2;
+		return -((((2 * 1000) + grpNr) * 1000) + neoGroups.size()); // Invalid parameter
 	}
 	NeoGroup *neoGroup = neoGroups.at(grpNr);
 	neoGroup->Stop();
@@ -242,20 +274,25 @@ int setEffect(String args)
 		direction direction = FORWARD)
 	*/
 	uint16_t result = neoGroup->ConfigureEffect(fxPattern, fxGlitter, fxFps, fxDir);
-	neoGroup->Start();
+	//neoGroup->Start();
 	return result;
 }
 
 int setColors(String args)
 {
-	JsonObject &jsonArgs = parseArgs(args);
+	//JsonObject &jsonArgs = parseArgs(args);
+	StaticJsonBuffer<200> jsonBuffer;
+	char argsbuf[args.length() + 1];
+	args.toCharArray(argsbuf, args.length() + 1);
+	JsonObject &jsonArgs = jsonBuffer.parseObject(argsbuf);
+
 	if (!jsonArgs.success())
 		if (!jsonArgs.success())
 			return -1;
 	int grpNr = (jsonArgs.containsKey("grp")) ? jsonArgs["grp"] : -1;
 	if (grpNr < 0 || grpNr >= neoGroups.size())
 	{
-		return -2;
+		return -((((2 * 1000) + grpNr) * 1000) + neoGroups.size()); // Invalid parameter
 	}
 	NeoGroup *neoGroup = neoGroups.at(grpNr);
 	//neoGroup->Stop();
@@ -269,7 +306,7 @@ int setColors(String args)
 		String palKey = (jsonArgs.containsKey("pal")) ? jsonArgs["pal"] : "";
 		if (ColorPalettes.find(palKey) == ColorPalettes.end())
 		{
-			return -2;
+			return grpNr; //-2;
 		}
 		std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
 
