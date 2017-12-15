@@ -1,0 +1,32 @@
+initStrip:
+	int ledC
+
+startStrip:
+
+stopStrip:
+
+addGroup:
+	string id
+	int ledF
+	int ledC
+
+startGroup:
+	int grp
+
+stopGroup:
+	int grp
+	bool now
+
+setEffect:
+	int grp
+	string fx [static,fade,rainbow,confetti,fire]
+	bool glt
+	int fps
+	string dir [f,r]
+
+setColors
+	int grp
+	string pal
+	bool clr
+	bool gen
+	uint32[] cols

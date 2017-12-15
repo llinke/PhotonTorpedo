@@ -26,7 +26,6 @@ enum direction
 	//	INWARD
 };
 
-// NeoPattern Class - derived from the Adafruit_NeoPixel class
 class NeoGroup
 {
 #define FIRE_COOLING 55
@@ -55,7 +54,6 @@ class NeoGroup
 	int LedCount;
 	bool Active;
 
-	// Constructor - calls base-class constructor to initialize strip
 	NeoGroup(String groupID, int ledFirst, int ledCount)
 	{
 		GroupID = groupID;
@@ -146,9 +144,12 @@ class NeoGroup
 	{
 		Active = false;
 		fxFadeOut = (stopNow) ? 0 : FADEOUT_STEPS;
+		if (stopNow)
+		{
+			fill_solid(LedFirst, LedCount, 0x000000);
+		}
 	}
 
-	// Update the pattern
 	void Update()
 	{
 		if (fxFadeOut > 0)
@@ -218,7 +219,6 @@ class NeoGroup
 		}
 	}
 
-	// Reverse pattern direction
 	void ReverseFxDirection()
 	{
 		if (fxDirection == FORWARD)
@@ -233,7 +233,6 @@ class NeoGroup
 		}
 	}
 
-	// Update the Static Pattern
 	void FxStatic()
 	{
 		CRGB newColor = ColorFromPalette(colorPalette, 0);
