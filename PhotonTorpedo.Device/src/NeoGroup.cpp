@@ -11,9 +11,10 @@
 
 enum pattern
 {
-	NONE,
+	NOFX,
 	STATIC,
 	FADE,
+	WAVE,
 	RAINBOW,
 	CONFETTI,
 	FIRE
@@ -23,7 +24,13 @@ enum direction
 	FORWARD,
 	REVERSE,
 	//	OUTWARD,
-	//	INWARD
+	//	IN0WARD
+};
+enum mirror
+{
+	MIRROR0,
+	MIRROR1,
+	MIRROR2
 };
 
 class NeoGroup
@@ -34,6 +41,7 @@ class NeoGroup
 #define FADEOUT_STEPS 20
 
 	CRGB *LedFirst;
+	int LedOffset = 0;
 
 	unsigned long updateInterval;
 	unsigned long lastUpdate;
@@ -41,7 +49,9 @@ class NeoGroup
 	uint16_t totalFxSteps;
 	direction fxDirection;
 	int fxFadeOut = 0;
-	bool fxAddGlitter;
+	int fxAmountGlitter;
+	uint16_t fxLength;
+	mirror fxMirror = MIRROR0;
 
 	std::vector<CRGB> currentColors = {};
 	CRGBPalette16 colorPalette;
@@ -54,28 +64,33 @@ class NeoGroup
 	int LedCount;
 	bool Active;
 
-	NeoGroup(String groupID, int ledFirst, int ledCount)
+	NeoGroup(String groupID, int ledFirst, int ledCount, int ledOffset = 0)
 	{
 		GroupID = groupID;
 		Active = false;
 		fxStep = 0;
 		LedFirst = &leds[ledFirst];
 		LedCount = ledCount;
+		LedOffset = ledOffset;
 		totalFxSteps = LedCount;
 	}
 
 	uint16_t ConfigureEffect(
 		pattern pattern,
-		bool addglitter = false,
+		uint16_t length = 0,
+		int amountglitter = 0,
 		uint8_t fps = 50,
-		direction direction = FORWARD)
+		direction direction = FORWARD,
+		mirror mirror = MIRROR0)
 	{
 		Stop();
 
 		updateInterval = (1000 / fps);
 		fxStep = 0;
 		fxDirection = direction;
-		fxAddGlitter = addglitter;
+		fxAmountGlitter = amountglitter;
+		fxMirror = mirror;
+		fxLength = 256;
 		totalFxSteps = 256;
 
 		if (pattern == STATIC)
@@ -87,20 +102,26 @@ class NeoGroup
 		{
 			effectFunc = &NeoGroup::FxFade;
 		}
+		if (pattern == WAVE)
+		{
+			effectFunc = &NeoGroup::FxWave;
+			fxLength = (length == 0 ? (LedCount * 2) : length);
+		}
 		if (pattern == RAINBOW)
 		{
 			effectFunc = &NeoGroup::FxRainbow;
+			fxLength = (length == 0 ? (LedCount * 2) : length);
 		}
 		if (pattern == CONFETTI)
 		{
 			effectFunc = &NeoGroup::FxConfetti;
-			fxAddGlitter = false;
+			fxAmountGlitter = 0;
 		}
 		if (pattern == FIRE)
 		{
 			fill_solid(LedFirst, LedCount, 0x000000);
 			effectFunc = &NeoGroup::FxFire;
-			fxAddGlitter = false;
+			fxAmountGlitter = 0;
 		}
 		return totalFxSteps;
 	}
@@ -177,9 +198,9 @@ class NeoGroup
 			{
 				(this->*effectFunc)();
 
-				if (fxAddGlitter)
+				if (fxAmountGlitter > 0)
 				{
-					FxGlitter();
+					FxGlitter(fxAmountGlitter);
 				}
 			}
 		}
@@ -233,6 +254,46 @@ class NeoGroup
 		}
 	}
 
+	void SetPixel(int pos, CRGB col, mirror mirror = MIRROR0)
+	{
+		if (mirror == MIRROR1) // set even/odd as mirror values
+		{
+			int newPos = pos / 2;
+			if ((pos % 2) == 0)
+			{
+				LedFirst[CapLedPosition(newPos + LedOffset)] = col;
+			}
+			else
+			{
+				int mirrorPos = LedCount - newPos - 1;
+				LedFirst[CapLedPosition(mirrorPos + LedOffset)] = col;
+			}
+			return;
+		}
+
+		if (mirror == MIRROR2) // mirror each second value
+		{
+			int newPos = pos / 2;
+			LedFirst[CapLedPosition(newPos + LedOffset)] = col;
+			int mirrorPos = LedCount - newPos - 1;
+			LedFirst[CapLedPosition(mirrorPos + LedOffset)] = col;
+			return;
+		}
+
+		// else
+		LedFirst[CapLedPosition(pos + LedOffset)] = col;
+	}
+
+	int CapLedPosition(int pos)
+	{
+		int newPos = pos;
+		while (newPos >= LedCount)
+			newPos -= LedCount;
+		while (newPos < 0)
+			newPos += LedCount;
+		return newPos;
+	}
+
 	void FxStatic()
 	{
 		CRGB newColor = ColorFromPalette(colorPalette, 0);
@@ -247,11 +308,41 @@ class NeoGroup
 		NextFxStep();
 	}
 
+	void FxWave()
+	{
+		uint8_t waveLength = fxLength;
+		uint8_t deltaWave = waveLength >= LedCount ? waveLength / LedCount : 1;
+		//fill_rainbow(LedFirst, LedCount, fxStep, deltaHue);
+
+		CRGB rgb;
+		uint8_t wavePos = fxStep;
+		for (int i = 0; i < LedCount; i++)
+		{
+			rgb = ColorFromPalette(colorPalette, wavePos);
+			SetPixel((LedCount - i - 1), rgb, fxMirror);
+			wavePos += deltaWave;
+		}
+
+		NextFxStep();
+	}
+
 	void FxRainbow()
 	{
-		uint8_t rainBowLength = 64;
-		uint8_t deltaHue = rainBowLength > LedCount ? rainBowLength / LedCount : 1;
-		fill_rainbow(LedFirst, LedCount, fxStep, deltaHue);
+		uint8_t rainBowLength = fxLength;
+		uint8_t deltaHue = rainBowLength >= LedCount ? rainBowLength / LedCount : 1;
+		//fill_rainbow(LedFirst, LedCount, fxStep, deltaHue);
+
+		CHSV hsv;
+		hsv.hue = fxStep;
+		hsv.sat = 240;
+		hsv.val = 255;
+		for (int i = 0; i < LedCount; i++)
+		{
+			//LedFirst[i] = hsv;
+			SetPixel((LedCount - i - 1), hsv, fxMirror);
+			hsv.hue += deltaHue;
+		}
+
 		NextFxStep();
 	}
 
@@ -291,7 +382,7 @@ class NeoGroup
 		// Step 3.  Randomly ignite new 'sparks' of heat near the bottom
 		if (random8() < FIRE_SPARKING)
 		{
-			int y = random8(7);
+			int y = random8(LedCount / 8);
 			heat[y] = qadd8(heat[y], random8(160, 255));
 		}
 
@@ -302,11 +393,7 @@ class NeoGroup
 			// for best results with color palettes.
 			byte colorindex = scale8(heat[j], 240);
 			CRGB color = ColorFromPalette(colorPalette, colorindex);
-			int dir = (j % 2);
-			int pixelnumber = dir == 0
-								  ? (LedCount / 2) + (j / 2) + 1
-								  : (LedCount / 2) - (j / 2);
-			LedFirst[pixelnumber] = color;
+			SetPixel(j, color, fxMirror);
 		}
 		NextFxStep();
 	}

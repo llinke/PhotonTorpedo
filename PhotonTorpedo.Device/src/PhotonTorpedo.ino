@@ -29,29 +29,6 @@ bool started = false;
 int pixelCount = PIXEL_COUNT;
 int groupCount = 0;
 
-void setup()
-{
-	// Register cloud methods
-	// Methods for LED strip
-	Particle.function("initStrip", initStrip);
-	Particle.function("startStrip", startStrip);
-	Particle.function("stopStrip", stopStrip);
-
-	// Methods for groups
-	Particle.function("addGroup", addGroup);
-	Particle.function("startGroup", startGroup);
-	Particle.function("stopGroup", stopGroup);
-
-	// Methods for group effects
-	Particle.function("setEffect", setEffect);
-	Particle.function("setColors", setColors);
-
-	// Register cloud variables
-	Particle.variable("countLeds", pixelCount);
-	Particle.variable("countGroups", groupCount);
-	Particle.variable("isStarted", started);
-}
-
 /*
 JsonObject &parseArgs(String args)
 {
@@ -77,6 +54,9 @@ int initStripInternal(int ledCount, bool doStart = false, bool playDemo = true)
 	FastLED.clear(true);
 	FastLED.show();
 
+	pixelCount = ledCount;
+	initialized = true;
+
 	if (playDemo)
 	{
 		for (int dot = 0; dot < ledCount; dot++)
@@ -96,12 +76,10 @@ int initStripInternal(int ledCount, bool doStart = false, bool playDemo = true)
 		FastLED.show();
 	}
 
-	pixelCount = ledCount;
-	initialized = true;
-
+	int offset = 4;
 	neoGroups.clear();
 	// Group 0: all LEDs
-	addGroupInternal("All LEDs", 0, pixelCount);
+	addGroupInternal("All LEDs", 0, pixelCount, offset);
 	/*
 	// Right Wing
 	addGroupInternal("Right Wing", 0, 9);
@@ -155,14 +133,14 @@ int stopStrip(String args)
 	return 0;
 }
 
-int addGroupInternal(String grpId, int ledFirst, int ledCount)
+int addGroupInternal(String grpId, int ledFirst, int ledCount, int ledOffset)
 {
 	if ((ledFirst >= pixelCount) ||
 		(ledCount <= 0) ||
 		(ledFirst + ledCount) > pixelCount)
 		return -((((3 * 1000) + ledFirst) * 1000) + ledCount); // Invalid parameter
 
-	NeoGroup *newGroup = new NeoGroup(grpId, ledFirst, ledCount);
+	NeoGroup *newGroup = new NeoGroup(grpId, ledFirst, ledCount, ledOffset);
 	neoGroups.push_back(newGroup);
 	return neoGroups.size();
 }
@@ -182,7 +160,8 @@ int addGroup(String args)
 	//int ledCount = (jsonArgs.containsKey("ledC")) ? jsonArgs["ledC"] : -1;
 	int ledFirst = jsonArgs.at("ledF");
 	int ledCount = jsonArgs.at("ledC");
-	return addGroupInternal(grpId, ledFirst, ledCount);
+	int ledOffset = (jsonArgs.containsKey("ledO")) ? jsonArgs["ledO"] : 0;
+	return addGroupInternal(grpId, ledFirst, ledCount, ledOffset);
 }
 
 int startGroup(String args)
@@ -247,18 +226,21 @@ int setEffect(String args)
 	NeoGroup *neoGroup = neoGroups.at(grpNr);
 	neoGroup->Stop();
 	String fxName = (jsonArgs.containsKey("fx")) ? jsonArgs["fx"] : "";
-	pattern fxPattern = pattern::NONE;
+	pattern fxPattern = pattern::NOFX;
 	if (fxName == "static")
 		fxPattern = pattern::STATIC;
 	if (fxName == "fade")
 		fxPattern = pattern::FADE;
+	if (fxName == "wave")
+		fxPattern = pattern::WAVE;
 	if (fxName == "rainbow")
 		fxPattern = pattern::RAINBOW;
 	if (fxName == "confetti")
 		fxPattern = pattern::CONFETTI;
 	if (fxName == "fire")
 		fxPattern = pattern::FIRE;
-	bool fxGlitter = (jsonArgs.containsKey("glt")) ? jsonArgs["glt"] : false;
+	int fxLength = (jsonArgs.containsKey("len")) ? jsonArgs["len"] : 0;
+	int fxGlitter = (jsonArgs.containsKey("glt")) ? jsonArgs["glt"] : 0;
 	int fxFps = (jsonArgs.containsKey("fps")) ? jsonArgs["fps"] : 50;
 	String parmDir = (jsonArgs.containsKey("dir")) ? jsonArgs["dir"] : "f";
 	direction fxDir = direction::FORWARD;
@@ -266,14 +248,13 @@ int setEffect(String args)
 		fxDir = direction::FORWARD;
 	if (parmDir == "r")
 		fxDir = direction::REVERSE;
-	/*
-	uint16_t ConfigureEffect(
-		pattern pattern,
-		bool addglitter = false,
-		uint8_t fps = 50,
-		direction direction = FORWARD)
-	*/
-	uint16_t result = neoGroup->ConfigureEffect(fxPattern, fxGlitter, fxFps, fxDir);
+	int parmMirror = (jsonArgs.containsKey("mirr")) ? jsonArgs["mirr"] : 0;
+	mirror fxMirror = mirror::MIRROR0;
+	if (parmMirror == 1)
+		fxMirror = mirror::MIRROR1;
+	if (parmMirror == 2)
+		fxMirror = mirror::MIRROR2;
+		uint16_t result = neoGroup->ConfigureEffect(fxPattern, fxLength, fxGlitter, fxFps, fxDir, fxMirror);
 	//neoGroup->Start();
 	return result;
 }
@@ -287,8 +268,7 @@ int setColors(String args)
 	JsonObject &jsonArgs = jsonBuffer.parseObject(argsbuf);
 
 	if (!jsonArgs.success())
-		if (!jsonArgs.success())
-			return -1;
+		return -1;
 	int grpNr = (jsonArgs.containsKey("grp")) ? jsonArgs["grp"] : -1;
 	if (grpNr < 0 || grpNr >= neoGroups.size())
 	{
@@ -331,6 +311,62 @@ int setColors(String args)
 		uint16_t result = neoGroup->ConfigureColors(colors, clearFirst, genPalette);
 		//neoGroup->Start();
 		return result;
+	}
+}
+
+void setup()
+{
+	// Register cloud methods
+	// Methods for LED strip
+	Particle.function("initStrip", initStrip);
+	Particle.function("startStrip", startStrip);
+	Particle.function("stopStrip", stopStrip);
+
+	// Methods for groups
+	Particle.function("addGroup", addGroup);
+	Particle.function("startGroup", startGroup);
+	Particle.function("stopGroup", stopGroup);
+
+	// Methods for group effects
+	Particle.function("setEffect", setEffect);
+	Particle.function("setColors", setColors);
+
+	// Register cloud variables
+	Particle.variable("countLeds", pixelCount);
+	Particle.variable("countGroups", groupCount);
+	Particle.variable("isStarted", started);
+
+	bool runXmasDemo = true;
+	// TEST: Christmas Effects
+	if (runXmasDemo)
+	{
+		initStripInternal(32, true, false);
+		String startArgs = "";
+		startStrip(startArgs);
+
+		/*
+		NeoGroup *neoGroup = neoGroups.at(0);
+		neoGroup->ConfigureEffect(pattern::FADE, true, 25, direction::FORWARD);
+		String palKey = "Christmas2";
+		std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
+		neoGroup->ConfigureColors(colors, true, true);
+		neoGroup->Start();
+		*/
+		NeoGroup *neoGroup = neoGroups.at(0);
+		/*
+		uint16_t ConfigureEffect(
+			pattern pattern,
+			uint16_t length = 0,
+			bool amountglitter = 0,
+			uint8_t fps = 50,
+			direction direction = FORWARD,
+			mirror mirror = MIRROR0)
+		*/
+		neoGroup->ConfigureEffect(pattern::WAVE, 32, 128, 25, direction::FORWARD, mirror::MIRROR2);
+		String palKey = "Christmas4";
+		std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
+		neoGroup->ConfigureColors(colors, true, true);
+		neoGroup->Start();
 	}
 }
 

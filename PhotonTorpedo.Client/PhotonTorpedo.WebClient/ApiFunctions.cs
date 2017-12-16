@@ -114,13 +114,16 @@ namespace PhotonTorpedo.WebClient
         public string fx { get; set; }
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public bool? glt { get; set; }
+        public int? glt { get; set; }
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public int? fps { get; set; }
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string dir { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public int? mirr { get; set; }
     }
 
     public class setColorsFunc : FunctionDataBase
