@@ -124,6 +124,9 @@ namespace PhotonTorpedo.WebClient
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public int? mirr { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public int? len { get; set; }
     }
 
     public class setColorsFunc : FunctionDataBase
