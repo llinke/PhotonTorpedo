@@ -358,7 +358,8 @@ class NeoGroup
 	{
 		fadeToBlackBy(LedFirst, LedCount, 10);
 		int pos = random16(LedCount);
-		LedFirst[pos] += CHSV(fxStep + random8(64), 200, 255);
+		//LedFirst[pos] += CHSV(fxStep + random8(64), 200, 255);
+		LedFirst[pos] += ColorFromPalette(colorPalette, fxStep + random8(64));
 		NextFxStep();
 	}
 

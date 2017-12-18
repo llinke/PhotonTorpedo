@@ -363,7 +363,7 @@ void setup()
 			mirror mirror = MIRROR0)
 		*/
 		neoGroup->ConfigureEffect(pattern::WAVE, 32, 128, 25, direction::FORWARD, mirror::MIRROR2);
-		String palKey = "Christmas4";
+		String palKey = "Christmas5";
 		std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
 		neoGroup->ConfigureColors(colors, true, true);
 		neoGroup->Start();
