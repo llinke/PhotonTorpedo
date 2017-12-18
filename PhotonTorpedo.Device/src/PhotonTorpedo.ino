@@ -345,15 +345,6 @@ void setup()
 		startStrip(startArgs);
 
 		/*
-		NeoGroup *neoGroup = neoGroups.at(0);
-		neoGroup->ConfigureEffect(pattern::FADE, true, 25, direction::FORWARD);
-		String palKey = "Christmas2";
-		std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
-		neoGroup->ConfigureColors(colors, true, true);
-		neoGroup->Start();
-		*/
-		NeoGroup *neoGroup = neoGroups.at(0);
-		/*
 		uint16_t ConfigureEffect(
 			pattern pattern,
 			uint16_t length = 0,
@@ -362,7 +353,13 @@ void setup()
 			direction direction = FORWARD,
 			mirror mirror = MIRROR0)
 		*/
-		neoGroup->ConfigureEffect(pattern::WAVE, 32, 128, 25, direction::FORWARD, mirror::MIRROR2);
+		pattern fxPattern = pattern::WAVE;
+		int fxLength = 48;
+		int fxGlitter = 48;
+		int fxFps = 25;
+		mirror fxMirror = mirror::MIRROR2;
+		NeoGroup *neoGroup = neoGroups.at(0);
+		neoGroup->ConfigureEffect(fxPattern, fxLength, fxGlitter, fxFps, direction::FORWARD, fxMirror);
 		String palKey = "Christmas5";
 		std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
 		neoGroup->ConfigureColors(colors, true, true);
