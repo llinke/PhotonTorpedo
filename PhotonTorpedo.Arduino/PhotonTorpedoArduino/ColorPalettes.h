@@ -1,6 +1,7 @@
 #include "FastLedInclude.h"
-#include <ArduinoSTL.h> 
-//#include <vector>
+#include <Arduino.h>
+//#include <ArduinoSTL.h>
+#include <vector>
 #include <map>
 
 const std::map<String, std::vector<CRGB>> ColorPalettes = {

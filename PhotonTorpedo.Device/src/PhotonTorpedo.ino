@@ -4,12 +4,17 @@
 * Author:
 * Date:
 */
+#define IncludeXmasDemo
 
 #include "FastLedInclude.h"
 #include "ColorPalettes.h"
-#include "NeoGroup.cpp"
-#include "SparkJson.h"
+#include <Arduino.h>
+//#include <ArduinoSTL.h>
 #include <vector>
+//#include <map>
+//#include "ArduinoJson.h"
+#include "SparkJson.h"
+#include "NeoGroup.cpp"
 
 SYSTEM_MODE(AUTOMATIC);
 
@@ -140,8 +145,11 @@ int addGroupInternal(String grpId, int ledFirst, int ledCount, int ledOffset)
 		(ledFirst + ledCount) > pixelCount)
 		return -((((3 * 1000) + ledFirst) * 1000) + ledCount); // Invalid parameter
 
-	NeoGroup *newGroup = new NeoGroup(grpId, ledFirst, ledCount, ledOffset);
-	neoGroups.push_back(newGroup);
+	//NeoGroup *newGroup = new NeoGroup(grpId, ledFirst, ledCount, ledOffset);
+	//neoGroups.push_back(newGroup);
+	//NeoGroup *newGroup = new NeoGroup(grpId, ledFirst, ledCount, ledOffset);
+	NeoGroup newGroup = NeoGroup(grpId, ledFirst, ledCount, ledOffset);
+	neoGroups.push_back(&newGroup);
 	return neoGroups.size();
 }
 
@@ -254,7 +262,7 @@ int setEffect(String args)
 		fxMirror = mirror::MIRROR1;
 	if (parmMirror == 2)
 		fxMirror = mirror::MIRROR2;
-		uint16_t result = neoGroup->ConfigureEffect(fxPattern, fxLength, fxGlitter, fxFps, fxDir, fxMirror);
+	uint16_t result = neoGroup->ConfigureEffect(fxPattern, fxLength, fxGlitter, fxFps, fxDir, fxMirror);
 	//neoGroup->Start();
 	return result;
 }
@@ -299,6 +307,7 @@ int setColors(String args)
 		bool clearFirst = (jsonArgs.containsKey("clr")) ? jsonArgs["clr"] : true;
 		bool genPalette = (jsonArgs.containsKey("gen")) ? jsonArgs["gen"] : true;
 		std::vector<CRGB> colors = {};
+		//std::vector<CRGB> colors;
 		JsonArray &colorsArray = jsonArgs["cols"];
 		if (colorsArray != JsonArray::invalid())
 		{
@@ -336,6 +345,8 @@ void setup()
 	Particle.variable("countGroups", groupCount);
 	Particle.variable("isStarted", started);
 
+
+#ifdef IncludeXmasDemo
 	bool runXmasDemo = true;
 	// TEST: Christmas Effects
 	if (runXmasDemo)
@@ -344,15 +355,6 @@ void setup()
 		String startArgs = "";
 		startStrip(startArgs);
 
-		/*
-		uint16_t ConfigureEffect(
-			pattern pattern,
-			uint16_t length = 0,
-			bool amountglitter = 0,
-			uint8_t fps = 50,
-			direction direction = FORWARD,
-			mirror mirror = MIRROR0)
-		*/
 		pattern fxPattern = pattern::WAVE;
 		int fxLength = 48;
 		int fxGlitter = 48;

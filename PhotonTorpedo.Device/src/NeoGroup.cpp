@@ -6,8 +6,10 @@
 */
 
 #include "FastLedInclude.h"
+//#include <Arduino.h>
+//#include <ArduinoSTL.h>
 #include <vector>
-#include <map>
+//#include <map>
 
 enum pattern
 {
@@ -53,7 +55,8 @@ class NeoGroup
 	uint16_t fxLength;
 	mirror fxMirror = MIRROR0;
 
-	std::vector<CRGB> currentColors = {};
+	//std::vector<CRGB> currentColors = {};
+	std::vector<CRGB> currentColors;
 	CRGBPalette16 colorPalette;
 	uint8_t firePaletteNr = 6;
 
@@ -149,7 +152,8 @@ class NeoGroup
 			}
 			else
 			{
-				colorPalette = NULL;
+				//colorPalette = NULL;
+				colorPalette = CRGBPalette16();
 			}
 		}
 		return currentColors.size();
