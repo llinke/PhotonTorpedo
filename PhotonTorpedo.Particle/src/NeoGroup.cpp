@@ -86,8 +86,10 @@ class NeoGroup
 		direction direction = FORWARD,
 		mirror mirror = MIRROR0)
 	{
+		Serial.println("Stopping effect execution.");
 		Stop();
 
+		Serial.println("Configuring effect parameters.");
 		updateInterval = (1000 / fps);
 		fxStep = 0;
 		fxDirection = direction;
@@ -98,30 +100,48 @@ class NeoGroup
 
 		if (pattern == STATIC)
 		{
+			Serial.print("Setting FX 'Static' for group '");
+			Serial.print(GroupID);
+			Serial.println("'.");
 			effectFunc = &NeoGroup::FxStatic;
 			totalFxSteps = 1;
 		}
 		if (pattern == FADE)
 		{
+			Serial.print("Setting FX 'Fade' for group '");
+			Serial.print(GroupID);
+			Serial.println("'.");
 			effectFunc = &NeoGroup::FxFade;
 		}
 		if (pattern == WAVE)
 		{
+			Serial.print("Setting FX 'Wave' for group '");
+			Serial.print(GroupID);
+			Serial.println("'.");
 			effectFunc = &NeoGroup::FxWave;
 			fxLength = (length == 0 ? (LedCount * 2) : length);
 		}
 		if (pattern == RAINBOW)
 		{
+			Serial.print("Setting FX 'Rainbow' for group '");
+			Serial.print(GroupID);
+			Serial.println("'.");
 			effectFunc = &NeoGroup::FxRainbow;
 			fxLength = (length == 0 ? (LedCount * 2) : length);
 		}
 		if (pattern == CONFETTI)
 		{
+			Serial.print("Setting FX 'Confetti' for group '");
+			Serial.print(GroupID);
+			Serial.println("'.");
 			effectFunc = &NeoGroup::FxConfetti;
 			fxAmountGlitter = 0;
 		}
 		if (pattern == FIRE)
 		{
+			Serial.print("Setting FX 'Fire' for group '");
+			Serial.print(GroupID);
+			Serial.println("'.");
 			fill_solid(LedFirst, LedCount, 0x000000);
 			effectFunc = &NeoGroup::FxFire;
 			fxAmountGlitter = 0;
@@ -134,11 +154,16 @@ class NeoGroup
 		bool clearFirst = true,
 		bool generatePalette = true)
 	{
+		Serial.print("Configuring colors for group '");
+		Serial.print(GroupID);
+		Serial.println("'.");
 		if (clearFirst)
 		{
+			Serial.println("Clearing old list of colors.");
 			currentColors.clear();
 		}
 
+		Serial.println("Adding CRGB colors to internal list.");
 		for (CRGB color : colors)
 		{
 			currentColors.push_back(color);
@@ -148,10 +173,12 @@ class NeoGroup
 		{
 			if (colors.size() != 0)
 			{
+				Serial.println("Generating color palette from colors.");
 				colorPalette = GenerateRGBPalette(currentColors);
 			}
 			else
 			{
+				Serial.println("No colors, using empty list.");
 				//colorPalette = NULL;
 				colorPalette = CRGBPalette16();
 			}
@@ -161,12 +188,18 @@ class NeoGroup
 
 	void Start()
 	{
+		Serial.print("Starting group '");
+		Serial.print(GroupID);
+		Serial.println("'.");
 		Active = true;
 		lastUpdate = 0;
 	}
 
 	void Stop(bool stopNow = false)
 	{
+		Serial.print("Stopping group '");
+		Serial.print(GroupID);
+		Serial.println("'.");
 		Active = false;
 		fxFadeOut = (stopNow) ? 0 : FADEOUT_STEPS;
 		if (stopNow)
@@ -175,7 +208,7 @@ class NeoGroup
 		}
 	}
 
-	void Update()
+	bool Update()
 	{
 		if (fxFadeOut > 0)
 		{
@@ -189,11 +222,13 @@ class NeoGroup
 					fill_solid(LedFirst, LedCount, 0x000000);
 				}
 			}
-			return;
+			return true; // LEDs updated
 		}
 
 		if (!Active)
-			return;
+		{
+			return false; // LEDs not updated
+		}
 
 		if ((millis() - lastUpdate) > updateInterval)
 		{
@@ -207,7 +242,10 @@ class NeoGroup
 					FxGlitter(fxAmountGlitter);
 				}
 			}
+			return true; // LEDs updated
 		}
+
+		return false; // LEDs not updated
 	}
 
 	void NextFxStep(bool invert = false)
@@ -407,18 +445,6 @@ class NeoGroup
 	{
 		CRGB nc[16];
 		int colCount = colors.size();
-		/*
-		for(int c = 0; c < 16; c++)
-		{
-			int modVal = (c * colCount) % 16;
-			int newColIdx1 = (c * colCount) >> 4; // same as DIV 16
-			int newColIdx2 = newColIdx1;
-			if (newColIdx2 >= colCount) newColIdx2 = 0;
-			CRGB col1 = colors[newColIdx1];
-			CRGB col2 = colors[newColIdx2];
-			nc[c] = blend(col1, col2, modVal << 4); // same as MUL 16
-		}
-		*/
 		for (int c = 0; c < colCount; c++)
 		{
 			uint16_t trgtIdx1 = ((c * 16) / colCount);

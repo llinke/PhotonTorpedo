@@ -4,7 +4,9 @@
 * Author:
 * Date:
 */
-#define IncludeXmasDemo
+#define INCLUDE_XMAS_DEMO
+#define INCLUDE_WIFI_MGR
+//#define INCLUDE_PHOTON
 
 #include "FastLedInclude.h"
 #include "ColorPalettes.h"
@@ -16,25 +18,35 @@
 //#include "SparkJson.h"
 #include "NeoGroup.cpp"
 
+#ifdef INCLUDE_WIFI_MGR
+#include <ESP8266WiFi.h>	  //ESP8266 Core WiFi Library (you most likely already have this in your sketch)
+#include <DNSServer.h>		  //Local DNS Server used for redirecting all requests to the configuration portal
+#include <ESP8266WebServer.h> //Local WebServer used to serve the configuration portal
+#include <WiFiManager.h>	  //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
+#endif
+
 //SYSTEM_MODE(AUTOMATIC);
 
-int ByteReceived;
+const int ConfigureAPTimeout = 30;
 
+//int ByteReceived;
+
+// Helper macro
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
 
 // Static size
 //struct CRGB leds[PIXEL_COUNT];
 // Dynamic size:
 struct CRGB *leds = NULL;
-
-//NeoGroup *neoGroup1;
-//NeoGroup *neoGroup2;
-std::vector<NeoGroup *> neoGroups;
-
+int pixelCount = PIXEL_COUNT;
 bool initialized = false;
 bool started = false;
-int pixelCount = PIXEL_COUNT;
+
+//std::vector<NeoGroup *> neoGroups;
+std::vector<NeoGroup> neoGroups;
 int groupCount = 0;
+
+int globalBrightness = 64;
 
 /*
 JsonObject &parseArgs(String args)
@@ -47,17 +59,42 @@ JsonObject &parseArgs(String args)
 }
 */
 
-int initStripInternal(int ledCount, bool doStart = false, bool playDemo = true)
+#ifdef INCLUDE_WIFI_MGR
+void InitWifi()
+{
+	//WiFiManager
+	WiFiManager wifiManager;
+	//wifiManager.resetSettings();
+	//wifiManager.setAPStaticIPConfig(IPAddress(10,0,1,1), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
+	//fetches ssid and pass from eeprom and tries to connect
+	//if it does not connect it starts an access point with the specified name
+	//here  "AutoConnectAP" and goes into a blocking loop awaiting configuration
+	Serial.print("WiFi Manager trying to connect (you have ");
+	Serial.print(ConfigureAPTimeout);
+	Serial.println(" seconds for configuration)...");
+	wifiManager.setConfigPortalTimeout(ConfigureAPTimeout);
+	wifiManager.autoConnect("XmasTreeAP");
+	//or use this for auto generated name ESP + ChipID
+	//wifiManager.autoConnect();
+	//if you get here you have connected to the WiFi
+	Serial.println("Connected to WiFi...yay!!!");
+}
+#endif
+
+int initStrip(int ledCount, bool doStart = false, bool playDemo = true)
 {
 	if (initialized)
 	{
-		return doStart ? startStrip("") : pixelCount;
+		return doStart ? startStrip() : pixelCount;
 	}
 
+	Serial.println("Allocating memory for LED strip data.");
 	leds = (struct CRGB *)malloc(ledCount * sizeof(struct CRGB));
+	Serial.println("Assigning LEDs to FastLED.");
 	FastLED.addLeds<PIXEL_TYPE, PIXEL_PIN>(leds, ledCount);
 	//FastLED.setMaxPowerInVoltsAndMilliamps(5,3000);
-	FastLED.setBrightness(64);
+	FastLED.setBrightness(globalBrightness);
+	FastLED.setDither(0);
 	FastLED.clear(true);
 	FastLED.show();
 
@@ -66,6 +103,7 @@ int initStripInternal(int ledCount, bool doStart = false, bool playDemo = true)
 
 	if (playDemo)
 	{
+		Serial.println("Playing little demo effect.");
 		for (int dot = 0; dot < ledCount; dot++)
 		{
 			leds[dot] = CHSV(random8(), 255, 255);
@@ -73,35 +111,129 @@ int initStripInternal(int ledCount, bool doStart = false, bool playDemo = true)
 			delay(10);
 		}
 		delay(500);
+	}
+#if defined(INCLUDE_WIFI_MGR) && defined(INCLUDE_XMAS_DEMO)
+	InitWifi();
+#endif
+	if (playDemo)
+	{
+		Serial.println("Fading away demo effect.");
 		for (int fade = 0; fade < 20; fade++)
 		{
 			fadeToBlackBy(leds, ledCount, 20);
 			FastLED.show();
 			delay(50);
 		}
+		Serial.println("Clearing LEDs.");
 		FastLED.clear(true);
 		FastLED.show();
 	}
 
+	Serial.println("Adding group 0 for all LEDs.");
 	int offset = 4;
 	neoGroups.clear();
 	// Group 0: all LEDs
-	addGroupInternal("All LEDs", 0, pixelCount, offset);
-	/*
-	// Right Wing
-	addGroupInternal("Right Wing", 0, 9);
-	// Small Room
-	addGroupInternal("Small Room", 10, 16);
-	// Gate
-	addGroupInternal("Gate", 17, 26);
-	// Main Hall
-	addGroupInternal("Main Hall", 32, 47);
-	*/
+	addGroup("All LEDs", 0, pixelCount, offset);
 
-	return doStart ? startStrip("") : pixelCount;
+	// Right Wing
+	//addGroup("Right Wing", 0, 9);
+	// Small Room
+	//addGroup("Small Room", 10, 16);
+	// Gate
+	//addGroup("Gate", 17, 26);
+	// Main Hall
+	//addGroup("Main Hall", 32, 47);
+
+	return doStart ? startStrip() : pixelCount;
 }
 
-int initStrip(String args)
+int startStrip()
+{
+	if (!initialized)
+		return -1;
+
+	started = true;
+	return pixelCount;
+}
+
+int stopStrip()
+{
+	started = false;
+
+	for (int i = 0; i < neoGroups.size(); i++)
+	{
+		NeoGroup *neoGroup = &(neoGroups.at(i));
+		neoGroup->Stop(true);
+	}
+
+	FastLED.clear(true);
+	FastLED.show();
+
+	return 0;
+}
+
+int addGroup(String grpId, int ledFirst, int ledCount, int ledOffset)
+{
+	if ((ledFirst >= pixelCount) ||
+		(ledCount <= 0) ||
+		(ledFirst + ledCount) > pixelCount)
+		return -((((3 * 1000) + ledFirst) * 1000) + ledCount); // Invalid parameter
+
+	// V1: new NeoGroup
+	//NeoGroup *newGroup = new NeoGroup(grpId, ledFirst, ledCount, ledOffset);
+	//neoGroups.push_back(newGroup);
+	// V2: NeoGroup w/o new
+	NeoGroup newGroup = NeoGroup(grpId, ledFirst, ledCount, ledOffset);
+	neoGroups.push_back(newGroup);
+	return neoGroups.size();
+}
+
+int startGroup(int grpNr)
+{
+	NeoGroup *neoGroup = &(neoGroups.at(grpNr));
+	neoGroup->Start();
+	return 0;
+}
+
+int stopGroup(int grpNr, bool stopNow = false)
+{
+	NeoGroup *neoGroup = &(neoGroups.at(grpNr));
+	neoGroup->Stop(stopNow);
+	return 0;
+}
+
+int setEffect(
+	int grpNr,
+	pattern pattern,
+	uint16_t length = 0,
+	int amountglitter = 0,
+	uint8_t fps = 50,
+	direction direction = FORWARD,
+	mirror mirror = MIRROR0)
+{
+	NeoGroup *neoGroup = &(neoGroups.at(grpNr));
+	neoGroup->Stop();
+
+	uint16_t result = neoGroup->ConfigureEffect(pattern, length, amountglitter, fps, direction, mirror);
+	//neoGroup->Start();
+	return result;
+}
+
+int setColors(
+	int grpNr,
+	std::vector<CRGB> colors,
+	bool clearFirst = true,
+	bool generatePalette = true)
+{
+	NeoGroup *neoGroup = &(neoGroups.at(grpNr));
+	//neoGroup->Stop();
+	uint16_t result = neoGroup->ConfigureColors(colors, clearFirst, generatePalette);
+	//neoGroup->Start();
+	return result;
+}
+
+#ifdef INCLUDE_PHOTON
+int initStripParticle(String args)
 {
 	//JsonObject &jsonArgs = parseArgs(args);
 	StaticJsonBuffer<200> jsonBuffer;
@@ -112,50 +244,20 @@ int initStrip(String args)
 	if (!jsonArgs.success())
 		return -1; // Invalid JSon arguments
 	int ledCount = (jsonArgs.containsKey("ledC")) ? jsonArgs["ledC"] : 0;
-	return initStripInternal(ledCount);
+	return initStrip(ledCount);
 }
 
-int startStrip(String args)
+int startStripParticle(String args)
 {
-	if (!initialized)
-		return -1;
-
-	started = true;
-	return pixelCount;
+	return startStrip();
 }
 
-int stopStrip(String args)
+int stopStripParticle(String args)
 {
-	started = false;
-
-	for (int i = 0; i < neoGroups.size(); i++)
-	{
-		NeoGroup *neoGroup = neoGroups.at(i);
-		neoGroup->Stop(true);
-	}
-
-	FastLED.clear(true);
-	FastLED.show();
-
-	return 0;
+	return stopStrip();
 }
 
-int addGroupInternal(String grpId, int ledFirst, int ledCount, int ledOffset)
-{
-	if ((ledFirst >= pixelCount) ||
-		(ledCount <= 0) ||
-		(ledFirst + ledCount) > pixelCount)
-		return -((((3 * 1000) + ledFirst) * 1000) + ledCount); // Invalid parameter
-
-	//NeoGroup *newGroup = new NeoGroup(grpId, ledFirst, ledCount, ledOffset);
-	//neoGroups.push_back(newGroup);
-	//NeoGroup *newGroup = new NeoGroup(grpId, ledFirst, ledCount, ledOffset);
-	NeoGroup newGroup = NeoGroup(grpId, ledFirst, ledCount, ledOffset);
-	neoGroups.push_back(&newGroup);
-	return neoGroups.size();
-}
-
-int addGroup(String args)
+int addGroupParticle(String args)
 {
 	//JsonObject &jsonArgs = parseArgs(args);
 	StaticJsonBuffer<200> jsonBuffer;
@@ -171,10 +273,10 @@ int addGroup(String args)
 	int ledFirst = jsonArgs["ledF"];
 	int ledCount = jsonArgs["ledC"];
 	int ledOffset = (jsonArgs.containsKey("ledO")) ? jsonArgs["ledO"] : 0;
-	return addGroupInternal(grpId, ledFirst, ledCount, ledOffset);
+	return addGroup(grpId, ledFirst, ledCount, ledOffset);
 }
 
-int startGroup(String args)
+int startGroupParticle(String args)
 {
 	//JsonObject &jsonArgs = parseArgs(args);
 	StaticJsonBuffer<200> jsonBuffer;
@@ -183,19 +285,16 @@ int startGroup(String args)
 	JsonObject &jsonArgs = jsonBuffer.parseObject(argsbuf);
 
 	if (!jsonArgs.success())
-		if (!jsonArgs.success())
-			return -1;
+		return -1;
 	int grpNr = (jsonArgs.containsKey("grp")) ? jsonArgs["grp"] : -1;
 	if (grpNr < 0 || grpNr >= neoGroups.size())
 	{
 		return -((((2 * 1000) + grpNr) * 1000) + neoGroups.size()); // Invalid parameter
 	}
-	NeoGroup *neoGroup = neoGroups[grpNr];
-	neoGroup->Start();
-	return 0;
+	return startGroup(grpNr);
 }
 
-int stopGroup(String args)
+int stopGroupParticle(String args)
 {
 	//JsonObject &jsonArgs = parseArgs(args);
 	StaticJsonBuffer<200> jsonBuffer;
@@ -204,20 +303,16 @@ int stopGroup(String args)
 	JsonObject &jsonArgs = jsonBuffer.parseObject(argsbuf);
 
 	if (!jsonArgs.success())
-		if (!jsonArgs.success())
-			return -1;
+		return -1;
 	int grpNr = (jsonArgs.containsKey("grp")) ? jsonArgs["grp"] : -1;
 	if (grpNr < 0 || grpNr >= neoGroups.size())
 	{
 		return -((((2 * 1000) + grpNr) * 1000) + neoGroups.size()); // Invalid parameter
 	}
 	bool stopNow = (jsonArgs.containsKey("now")) ? jsonArgs["now"] : false;
-	NeoGroup *neoGroup = neoGroups.at(grpNr);
-	neoGroup->Stop(stopNow);
-	return 0;
+	return stopGroup(grpNr, stopNow);
 }
-
-int setEffect(String args)
+int setEffectParticle(String args)
 {
 	//JsonObject &jsonArgs = parseArgs(args);
 	StaticJsonBuffer<200> jsonBuffer;
@@ -226,15 +321,12 @@ int setEffect(String args)
 	JsonObject &jsonArgs = jsonBuffer.parseObject(argsbuf);
 
 	if (!jsonArgs.success())
-		if (!jsonArgs.success())
-			return -1;
+		return -1;
 	int grpNr = (jsonArgs.containsKey("grp")) ? jsonArgs["grp"] : -1;
 	if (grpNr < 0 || grpNr >= neoGroups.size())
 	{
 		return -((((2 * 1000) + grpNr) * 1000) + neoGroups.size()); // Invalid parameter
 	}
-	NeoGroup *neoGroup = neoGroups.at(grpNr);
-	neoGroup->Stop();
 	String fxName = (jsonArgs.containsKey("fx")) ? jsonArgs["fx"].as<String>() : "";
 	pattern fxPattern = pattern::NOFX;
 	if (fxName == "static")
@@ -264,12 +356,9 @@ int setEffect(String args)
 		fxMirror = mirror::MIRROR1;
 	if (parmMirror == 2)
 		fxMirror = mirror::MIRROR2;
-	uint16_t result = neoGroup->ConfigureEffect(fxPattern, fxLength, fxGlitter, fxFps, fxDir, fxMirror);
-	//neoGroup->Start();
-	return result;
+	return setEffect(grpNr, fxPattern, fxLength, fxGlitter, fxFps, fxDir, fxMirror);
 }
-
-int setColors(String args)
+int setColorsParticle(String args)
 {
 	//JsonObject &jsonArgs = parseArgs(args);
 	StaticJsonBuffer<200> jsonBuffer;
@@ -284,8 +373,6 @@ int setColors(String args)
 	{
 		return -((((2 * 1000) + grpNr) * 1000) + neoGroups.size()); // Invalid parameter
 	}
-	NeoGroup *neoGroup = neoGroups.at(grpNr);
-	//neoGroup->Stop();
 
 	String palKey = "";
 	bool clearFirst = true;
@@ -299,10 +386,7 @@ int setColors(String args)
 			return grpNr; //-2;
 		}
 		std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
-
-		uint16_t result = neoGroup->ConfigureColors(colors, clearFirst, genPalette);
-		//neoGroup->Start();
-		return result;
+		return setColors(grpNr, colors, clearFirst, genPalette);
 	}
 	else
 	{
@@ -319,106 +403,105 @@ int setColors(String args)
 				colors.push_back(CRGB(colVal));
 			}
 		}
-		uint16_t result = neoGroup->ConfigureColors(colors, clearFirst, genPalette);
-		//neoGroup->Start();
-		return result;
+		return setColors(grpNr, colors, clearFirst, genPalette);
 	}
 }
-
-void setup()
+void RegisterPhotonFunctions()
 {
-	/*
 	// Register cloud methods
 	// Methods for LED strip
-	Particle.function("initStrip", initStrip);
-	Particle.function("startStrip", startStrip);
-	Particle.function("stopStrip", stopStrip);
+	Particle.function("initStrip", initStripParticle);
+	Particle.function("startStrip", startStripParticle);
+	Particle.function("stopStrip", stopStripParticle);
 
 	// Methods for groups
-	Particle.function("addGroup", addGroup);
-	Particle.function("startGroup", startGroup);
-	Particle.function("stopGroup", stopGroup);
+	Particle.function("addGroup", addGroupParticle);
+	Particle.function("startGroup", startGroupParticle);
+	Particle.function("stopGroup", stopGroupParticle);
 
 	// Methods for group effects
-	Particle.function("setEffect", setEffect);
-	Particle.function("setColors", setColors);
+	Particle.function("setEffect", setEffectParticle);
+	Particle.function("setColors", setColorsParticle);
 
 	// Register cloud variables
 	Particle.variable("countLeds", pixelCount);
 	Particle.variable("countGroups", groupCount);
 	Particle.variable("isStarted", started);
-  */
+}
+#endif
 
-	Serial.begin(9600);
-	Serial.println("Setting up Xmas Tree for Arduino");
+void setup()
+{
+#ifdef INCLUDE_PHOTON
+	RegisterPhotonFunctions();
+#endif
 
-#ifdef IncludeXmasDemo
-	bool runXmasDemo = true;
+	Serial.begin(115200);
+
+#if defined(INCLUDE_WIFI_MGR) && !defined(INCLUDE_XMAS_DEMO)
+	InitWifi();
+#endif
+
+#ifdef INCLUDE_XMAS_DEMO
 	// TEST: Christmas Effects
-	if (runXmasDemo)
-	{
-		Serial.println("Calling initStripInternal");
-		initStripInternal(32, true, false);
-		Serial.print("LEDs: ");
-		Serial.print(pixelCount);
-		Serial.println("");
-		String startArgs = "";
-		startStrip(startArgs);
+	Serial.println("Setting up Xmas Tree for Arduino");
+	Serial.println("Initializing LED strip");
+	initStrip(32, true, true);
+	Serial.print("LEDs: ");
+	Serial.print(pixelCount);
+	Serial.println("");
 
-		pattern fxPattern = pattern::WAVE;
-		int fxLength = 48;
-		int fxGlitter = 48;
-		int fxFps = 25;
-		mirror fxMirror = mirror::MIRROR2;
-		NeoGroup *neoGroup = neoGroups.at(0);
-		neoGroup->ConfigureEffect(fxPattern, fxLength, fxGlitter, fxFps, direction::FORWARD, fxMirror);
-		String palKey = "Christmas5";
+	Serial.println("Starting LED strip");
+	startStrip();
+
+	Serial.println("Configuring LED effect");
+	pattern fxPattern = pattern::WAVE;
+	int fxLength = 48;
+	int fxGlitter = 48;
+	int fxFps = 25;
+	mirror fxMirror = mirror::MIRROR2;
+	NeoGroup *neoGroup = &(neoGroups.at(0));
+	neoGroup->ConfigureEffect(fxPattern, fxLength, fxGlitter, fxFps, direction::FORWARD, fxMirror);
+
+	String palKey = "Christmas5";
+	if (ColorPalettes.find(palKey) != ColorPalettes.end())
+	{
 		std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
 		neoGroup->ConfigureColors(colors, true, true);
-		neoGroup->Start();
 	}
+	Serial.println("Starting LED effect");
+	neoGroup->Start();
+#else
+	Serial.println("Xmas Tree not active");
 #endif
 }
 
 // Main loop
 void loop()
 {
-	if (Serial.available() > 0)
-	{
-		ByteReceived = Serial.read();
-		Serial.print(ByteReceived);
-		Serial.print("        ");
-		Serial.print(ByteReceived, HEX);
-		Serial.print("       ");
-		Serial.print(char(ByteReceived));
-		if (ByteReceived == '1') // Single Quote! This is a character.
-		{
-			Serial.print(" LED ON ");
-		}
-		if (ByteReceived == '0')
-		{
-			Serial.print(" LED OFF");
-		}
-		Serial.println(); // End the line
-	}
-
 	if (!started)
 		return;
 
-	int count = 0;
 	bool isActiveMainGrp = false;
+	bool ledsUpdated = false;
 	for (int i = 0; i < neoGroups.size(); i++)
 	{
-		NeoGroup *neoGroup = neoGroups.at(i);
-		count += neoGroup->LedCount;
-		neoGroup->Update();
+		NeoGroup *neoGroup = &(neoGroups.at(i));
+		if (neoGroup->LedCount <= pixelCount)
+		{
+			ledsUpdated |= neoGroup->Update();
+		}
 
 		if (i == 0)
 			isActiveMainGrp = neoGroup->Active;
 		if (i > 0 && isActiveMainGrp)
 			break; // Don't update other groups if main group (all LEDs) is active
 	}
-	FastLED.show();
+	if (ledsUpdated)
+	{
+		//Serial.print("Refreshing LEDs.");
+		FastLED.show();
+	}
 	//pixelCount = count; //PIXEL_COUNT;
 	groupCount = neoGroups.size() - 1; // Don't count main group (all LEDs)
 }

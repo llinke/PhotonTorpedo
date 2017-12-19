@@ -25,11 +25,14 @@ const std::map<String, std::vector<CRGB>> ColorPalettes = {
     {"Castle1", {CRGB(0x996C97), CRGB(0x8D8EA3), CRGB(0x99A8AD), CRGB(0xEFBE9E), CRGB(0xF6DFA9)}},
     {"Castle2", {CRGB(0xF98367), CRGB(0x9BB1C6), CRGB(0xE4E2E3), CRGB(0xCDBFB4), CRGB(0x506678)}},
     {"Fresh", {CRGB(0xF35C9F), CRGB(0xF3F3F3), CRGB(0x22ADC2), CRGB(0x736F66)}},
+
+    // Christmas
     {"Christmas1", {CRGB(0x941F1F), CRGB(0xCE6B5D), CRGB(0xFFEFB9), CRGB(0x7B9971), CRGB(0x34502B), CRGB(0x7A7E5F)}},
     {"Christmas2", {CRGB(0x9E3333), CRGB(0xAB6060), CRGB(0xD4D1A5), CRGB(0x7BBD82), CRGB(0x3D9949), CRGB(0x7A7E5F)}},
     {"Christmas3", {CRGB::Black, CRGB::DarkRed, CRGB::DarkOrange, CRGB::DarkGreen}},
     {"Christmas4", {CRGB::Black, CRGB::DarkViolet, CRGB::DarkRed, CRGB::Black, CRGB::DarkOrange, CRGB::DarkGreen}},
     {"Christmas5", {CRGB::Black, CRGB::DarkViolet, CRGB::DarkRed, CRGB::Black, CRGB::DarkCyan, CRGB::DarkBlue, CRGB::Black, CRGB::DarkOrange, CRGB::DarkGreen}},
+
     // Fires
     {"CozyFire1", {CRGB(0x330A04), CRGB(0x6C1305), CRGB(0xB32900), CRGB(0xDE8531), CRGB(0xEFAC41)}},
     {"CozyFire2", {CRGB(0x992C61), CRGB(0xFF244A), CRGB(0xFF631B), CRGB(0xFFBF1E), CRGB(0xFFF3CF)}},

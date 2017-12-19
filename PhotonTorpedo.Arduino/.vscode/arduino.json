@@ -1,6 +1,7 @@
 {
-    "board": "esp8266:esp8266:generic",
+    "board": "esp8266:esp8266:nodemcuv2",
     "sketch": "PhotonTorpedoArduino\\PhotonTorpedoArduino.ino",
-    "port": "COM7",
-    "configuration": "CpuFrequency=80,FlashFreq=40,FlashMode=dio,UploadSpeed=115200,FlashSize=512K64,ResetMethod=ck,Debug=Disabled,DebugLevel=None____"
+    "port": "COM6",
+    "output": "../build",
+    "configuration": "CpuFrequency=80,UploadSpeed=115200,FlashSize=4M3M"
 }
