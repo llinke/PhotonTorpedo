@@ -25,6 +25,10 @@
 #include <WiFiManager.h>	  //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 #endif
 
+#define BLYNK_PRINT Serial
+#include <BlynkSimpleEsp8266.h>
+char blynkAuth[] = "4abfe0577ae745aca3d5d5d9f37911b7";
+
 //SYSTEM_MODE(AUTOMATIC);
 
 const int ConfigureAPTimeout = 10;
@@ -113,6 +117,7 @@ bool InitWifi(bool useWifiCfgTimeout = true, bool forceReconnect = false)
 		Serial.println("Connected to WiFi...yay!!!");
 	else
 		Serial.println("NOT CONNECTED!!");
+
 	return connected;
 }
 #endif
@@ -149,7 +154,8 @@ int initStrip(int ledCount, bool doStart = false, bool playDemo = true)
 		delay(500);
 	}
 #if defined(INCLUDE_WIFI_MGR) && defined(INCLUDE_XMAS_DEMO)
-	InitWifi();
+	if (InitWifi())
+		Blynk.config(blynkAuth);
 #endif
 	if (playDemo)
 	{
@@ -563,6 +569,43 @@ void SetXmasColors(int grpNr, int colNr)
 }
 #endif
 
+void NextXmasEffect()
+{
+	currFxNr++;
+	if (currFxNr > maxFxNr)
+		currFxNr = 0;
+	Serial.print("Button 'FX' pressed, changing effect number to: ");
+	Serial.println(currFxNr);
+	SetXmasEffect(0, currFxNr, true);
+}
+
+void NextXmasColor()
+{
+	currColNr++;
+	if (currColNr > maxColNr)
+		currColNr = 0;
+	Serial.print("Button 'Colors' pressed, changing color number to: ");
+	Serial.println(currColNr);
+	SetXmasColors(0, currColNr);
+}
+
+BLYNK_WRITE(V1)
+{
+	int pinValue = param.asInt();
+	Serial.print("Blynk-Button 'FX' pressed: ");
+	Serial.println(pinValue);
+	if (pinValue == 1)
+		NextXmasEffect();
+}
+
+BLYNK_WRITE(V3)
+{
+	int pinValue = param.asInt();
+	Serial.print("Blynk-Button 'Colors' pressed: ");
+	Serial.println(pinValue);
+	if (pinValue == 1)
+		NextXmasColor();
+}
 void setup()
 {
 #ifdef INCLUDE_PHOTON
@@ -575,7 +618,8 @@ void setup()
 	pinMode(BUTTON_PIN_2, INPUT_PULLUP);
 
 #if defined(INCLUDE_WIFI_MGR) && !defined(INCLUDE_XMAS_DEMO)
-	InitWifi();
+	if (InitWifi())
+		Blynk.config(blynkAuth);
 #endif
 
 #ifdef INCLUDE_XMAS_DEMO
@@ -623,6 +667,10 @@ void setup()
 // Main loop
 void loop()
 {
+#ifdef INCLUDE_WIFI_MGR
+	Blynk.run();
+#endif
+
 	static bool button1Pressed = false;
 	static bool button2Pressed = false;
 	static bool bothButtonsPressed = false;
@@ -632,27 +680,18 @@ void loop()
 		(!btn1Pressed | !btn2Pressed) /*&&
 		WiFi.status() != WL_CONNECTED*/) // Both buttons pressed
 	{
-		InitWifi(false, true);
+		if (InitWifi(false, true))
+			Blynk.config(blynkAuth);
 	}
 	else
 	{
 		if (button1Pressed && !btn1Pressed) // Button was released
 		{
-			currFxNr++;
-			if (currFxNr > maxFxNr)
-				currFxNr = 0;
-			Serial.print("Button 'FX' pressed, changing effect number to: ");
-			Serial.println(currFxNr);
-			SetXmasEffect(0, currFxNr, true);
+			NextXmasEffect();
 		}
 		if (button2Pressed && !btn2Pressed) // Button was released
 		{
-			currColNr++;
-			if (currColNr > maxColNr)
-				currColNr = 0;
-			Serial.print("Button 'Colors' pressed, changing color number to: ");
-			Serial.println(currColNr);
-			SetXmasColors(0, currColNr);
+			NextXmasColor();
 		}
 	}
 	button1Pressed = btn1Pressed;
