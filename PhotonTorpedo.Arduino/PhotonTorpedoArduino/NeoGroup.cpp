@@ -45,7 +45,7 @@ class NeoGroup
 	CRGB *LedFirst;
 	int LedOffset = 0;
 
-	unsigned long updateInterval;
+	uint8_t fxFps;
 	unsigned long lastUpdate;
 	uint16_t fxStep;
 	uint16_t totalFxSteps;
@@ -90,10 +90,10 @@ class NeoGroup
 		Stop();
 
 		Serial.println("Configuring effect parameters.");
-		updateInterval = (1000 / fps);
+		ChangeFps(fps);
 		fxStep = 0;
 		fxDirection = direction;
-		fxAmountGlitter = amountglitter;
+		ChangeGlitter(amountglitter);
 		fxMirror = mirror;
 		fxLength = 256;
 		totalFxSteps = 256;
@@ -186,6 +186,26 @@ class NeoGroup
 		return currentColors.size();
 	}
 
+	void ChangeFps(uint8_t fps)
+	{
+		fxFps = fps;
+	}
+
+	uint8_t GetFps()
+	{
+		return fxFps;
+	}
+
+	void ChangeGlitter(int amountglitter)
+	{
+		fxAmountGlitter = amountglitter;
+	}
+
+	int GetGlitter()
+	{
+		return fxAmountGlitter;
+	}
+
 	void Start()
 	{
 		Serial.print("Starting group '");
@@ -230,6 +250,7 @@ class NeoGroup
 			return false; // LEDs not updated
 		}
 
+		int updateInterval = (1000 / fxFps);
 		if ((millis() - lastUpdate) > updateInterval)
 		{
 			lastUpdate = millis();

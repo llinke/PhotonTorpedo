@@ -28,6 +28,7 @@
 //SYSTEM_MODE(AUTOMATIC);
 
 const int ConfigureAPTimeout = 30;
+const int AutoChangeInterval = 15;
 
 //int ByteReceived;
 
@@ -41,6 +42,12 @@ struct CRGB *leds = NULL;
 int pixelCount = PIXEL_COUNT;
 bool initialized = false;
 bool started = false;
+#ifdef INCLUDE_XMAS_DEMO
+unsigned long lastUpdate = 0;
+unsigned long updateInterval = AutoChangeInterval * 1000;
+int currFxNr = 0;
+int currColNr = 0;
+#endif
 
 //std::vector<NeoGroup *> neoGroups;
 std::vector<NeoGroup> neoGroups;
@@ -206,15 +213,18 @@ int setEffect(
 	int grpNr,
 	pattern pattern,
 	uint16_t length = 0,
-	int amountglitter = 0,
-	uint8_t fps = 50,
+	int amountglitter = -1,
+	uint8_t fps = 0,
 	direction direction = FORWARD,
 	mirror mirror = MIRROR0)
 {
 	NeoGroup *neoGroup = &(neoGroups.at(grpNr));
 	neoGroup->Stop();
 
-	uint16_t result = neoGroup->ConfigureEffect(pattern, length, amountglitter, fps, direction, mirror);
+	int fxGlitter = amountglitter <= 0 ? neoGroup->GetGlitter() : amountglitter;
+	uint8_t fxFps = fps <= 0 ? neoGroup->GetFps() : fps;
+
+	uint16_t result = neoGroup->ConfigureEffect(pattern, length, fxGlitter, fxFps, direction, mirror);
 	//neoGroup->Start();
 	return result;
 }
@@ -430,6 +440,80 @@ void RegisterPhotonFunctions()
 }
 #endif
 
+#ifdef INCLUDE_XMAS_DEMO
+void SetXmasEffect(int grpNr, int fxNr)
+{
+	Serial.println("Configuring LED effect");
+
+	String fxPatternName = "";
+	pattern fxPattern = pattern::STATIC;
+	uint16_t fxLength = 255;
+	int fxGlitter = 48;
+	uint8_t fxFps = 25;
+	mirror fxMirror = MIRROR0;
+
+	if (fxNr == 1)
+	{
+		fxPatternName = "Wave";
+		fxPattern = pattern::WAVE;
+		fxLength = 48;
+		fxMirror = mirror::MIRROR2;
+	}
+	if (fxNr == 2)
+	{
+		fxPatternName = "Confetti";
+		fxPattern = pattern::CONFETTI;
+	}
+	if (fxNr == 3)
+	{
+		fxPatternName = "Fade";
+		fxPattern = pattern::FADE;
+	}
+	setEffect(
+		grpNr,
+		fxPattern,
+		fxLength,
+		fxGlitter,
+		fxFps,
+		direction::FORWARD,
+		fxMirror);
+}
+
+void SetXmasColors(int grpNr, int colNr)
+{
+	Serial.println("Configuring LED colors");
+	String palKey = "";
+	if (colNr == 1)
+	{
+		palKey = "Christmas5";
+	}
+	if (colNr == 2)
+	{
+		palKey = "Ocean1";
+	}
+	if (colNr == 3)
+	{
+		palKey = "Pop";
+	}
+	if (colNr == 4)
+	{
+		palKey = "NightAndDay2";
+	}
+	if (colNr == 5)
+	{
+		palKey = "CozyFire1";
+	}
+	Serial.print("Changing color palette to '");
+	Serial.print(palKey);
+	Serial.println("'");
+	if (ColorPalettes.find(palKey) != ColorPalettes.end())
+	{
+		std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
+		setColors(grpNr, colors, true, true);
+	}
+}
+#endif
+
 void setup()
 {
 #ifdef INCLUDE_PHOTON
@@ -454,6 +538,7 @@ void setup()
 	Serial.println("Starting LED strip");
 	startStrip();
 
+	/*
 	Serial.println("Configuring LED effect");
 	pattern fxPattern = pattern::WAVE;
 	int fxLength = 48;
@@ -463,14 +548,21 @@ void setup()
 	NeoGroup *neoGroup = &(neoGroups.at(0));
 	neoGroup->ConfigureEffect(fxPattern, fxLength, fxGlitter, fxFps, direction::FORWARD, fxMirror);
 
+	Serial.println("Configuring LED colors");
 	String palKey = "Christmas5";
 	if (ColorPalettes.find(palKey) != ColorPalettes.end())
 	{
 		std::vector<CRGB> colors = ColorPalettes.find(palKey)->second;
 		neoGroup->ConfigureColors(colors, true, true);
 	}
+
 	Serial.println("Starting LED effect");
 	neoGroup->Start();
+*/
+
+	SetXmasEffect(0, random8(1, 3));
+	SetXmasColors(0, random8(1, 5));
+	startGroup(0);
 #else
 	Serial.println("Xmas Tree not active");
 #endif
@@ -481,6 +573,22 @@ void loop()
 {
 	if (!started)
 		return;
+
+#ifdef INCLUDE_XMAS_DEMO
+	if ((millis() - lastUpdate) > updateInterval)
+	{
+		lastUpdate = millis();
+		if (currFxNr == 0)
+		{
+			SetXmasEffect(0, random8(1, 3));
+			if (currColNr == 0)
+			{
+				SetXmasColors(0, random8(1, 5));
+			}
+			startGroup(0);
+		}
+	}
+#endif
 
 	bool isActiveMainGrp = false;
 	bool ledsUpdated = false;
