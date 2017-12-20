@@ -12,6 +12,8 @@ FASTLED_USING_NAMESPACE
 #define PIXEL_COUNT 32
 //#define PIXEL_COUNT 48
 #define PIXEL_TYPE NEOPIXEL
+#define BUTTON_PIN_1 D5
+#define BUTTON_PIN_2 D6
 
 // Static size:
 //extern struct CRGB leds[];

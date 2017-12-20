@@ -27,7 +27,7 @@
 
 //SYSTEM_MODE(AUTOMATIC);
 
-const int ConfigureAPTimeout = 30;
+const int ConfigureAPTimeout = 10;
 const int AutoChangeInterval = 15;
 
 //int ByteReceived;
@@ -40,13 +40,15 @@ const int AutoChangeInterval = 15;
 // Dynamic size:
 struct CRGB *leds = NULL;
 int pixelCount = PIXEL_COUNT;
-bool initialized = false;
-bool started = false;
+bool ledsInitialized = false;
+bool ledsStarted = false;
 #ifdef INCLUDE_XMAS_DEMO
 unsigned long lastUpdate = 0;
 unsigned long updateInterval = AutoChangeInterval * 1000;
 int currFxNr = 0;
+const int maxFxNr = 3;
 int currColNr = 0;
+const int maxColNr = 5;
 #endif
 
 //std::vector<NeoGroup *> neoGroups;
@@ -67,8 +69,21 @@ JsonObject &parseArgs(String args)
 */
 
 #ifdef INCLUDE_WIFI_MGR
-void InitWifi()
+bool InitWifi(bool useWifiCfgTimeout = true, bool forceReconnect = false)
 {
+	if (!forceReconnect && WiFi.status() == WL_CONNECTED)
+	{
+		Serial.print("WiFi is already connected...");
+		return true; // Is already connected...
+	}
+
+	if (ledsInitialized)
+	{
+		FastLED.clear(true);
+		fill_solid(leds, pixelCount, CRGB::Blue);
+		FastLED.show();
+	}
+	delay(2500);
 	//WiFiManager
 	WiFiManager wifiManager;
 	//wifiManager.resetSettings();
@@ -76,21 +91,35 @@ void InitWifi()
 	//fetches ssid and pass from eeprom and tries to connect
 	//if it does not connect it starts an access point with the specified name
 	//here  "AutoConnectAP" and goes into a blocking loop awaiting configuration
-	Serial.print("WiFi Manager trying to connect (you have ");
-	Serial.print(ConfigureAPTimeout);
-	Serial.println(" seconds for configuration)...");
-	wifiManager.setConfigPortalTimeout(ConfigureAPTimeout);
-	wifiManager.autoConnect("XmasTreeAP");
+	Serial.print("WiFi Manager trying to connect...");
+	if (useWifiCfgTimeout)
+	{
+		Serial.print("Yyou have ");
+		Serial.print(ConfigureAPTimeout);
+		Serial.println(" seconds for configuration if required.");
+		wifiManager.setConfigPortalTimeout(ConfigureAPTimeout);
+	}
+	bool connected = wifiManager.autoConnect("XmasTreeAP");
 	//or use this for auto generated name ESP + ChipID
 	//wifiManager.autoConnect();
 	//if you get here you have connected to the WiFi
-	Serial.println("Connected to WiFi...yay!!!");
+	if (ledsInitialized)
+	{
+		fill_solid(leds, pixelCount, connected ? CRGB::Green : CRGB::Red);
+		FastLED.show();
+	}
+	delay(5000);
+	if (connected)
+		Serial.println("Connected to WiFi...yay!!!");
+	else
+		Serial.println("NOT CONNECTED!!");
+	return connected;
 }
 #endif
 
 int initStrip(int ledCount, bool doStart = false, bool playDemo = true)
 {
-	if (initialized)
+	if (ledsInitialized)
 	{
 		return doStart ? startStrip() : pixelCount;
 	}
@@ -106,7 +135,7 @@ int initStrip(int ledCount, bool doStart = false, bool playDemo = true)
 	FastLED.show();
 
 	pixelCount = ledCount;
-	initialized = true;
+	ledsInitialized = true;
 
 	if (playDemo)
 	{
@@ -156,16 +185,16 @@ int initStrip(int ledCount, bool doStart = false, bool playDemo = true)
 
 int startStrip()
 {
-	if (!initialized)
+	if (!ledsInitialized)
 		return -1;
 
-	started = true;
+	ledsStarted = true;
 	return pixelCount;
 }
 
 int stopStrip()
 {
-	started = false;
+	ledsStarted = false;
 
 	for (int i = 0; i < neoGroups.size(); i++)
 	{
@@ -436,14 +465,21 @@ void RegisterPhotonFunctions()
 	// Register cloud variables
 	Particle.variable("countLeds", pixelCount);
 	Particle.variable("countGroups", groupCount);
-	Particle.variable("isStarted", started);
+	Particle.variable("isStarted", ledsStarted);
 }
 #endif
 
 #ifdef INCLUDE_XMAS_DEMO
-void SetXmasEffect(int grpNr, int fxNr)
+void SetXmasEffect(int grpNr, int fxNr, bool startFx = false)
 {
 	Serial.println("Configuring LED effect");
+
+	if (fxNr == 0)
+	{
+		Serial.println("Choosing random effect.");
+		SetXmasEffect(grpNr, random8(1, maxFxNr), startFx);
+		return;
+	}
 
 	String fxPatternName = "";
 	pattern fxPattern = pattern::STATIC;
@@ -469,6 +505,9 @@ void SetXmasEffect(int grpNr, int fxNr)
 		fxPatternName = "Fade";
 		fxPattern = pattern::FADE;
 	}
+	Serial.print("Changing effect palette to '");
+	Serial.print(fxPatternName);
+	Serial.println("'");
 	setEffect(
 		grpNr,
 		fxPattern,
@@ -477,11 +516,21 @@ void SetXmasEffect(int grpNr, int fxNr)
 		fxFps,
 		direction::FORWARD,
 		fxMirror);
+	if (startFx)
+		startGroup(grpNr);
 }
 
 void SetXmasColors(int grpNr, int colNr)
 {
 	Serial.println("Configuring LED colors");
+
+	if (colNr == 0)
+	{
+		Serial.println("Choosing random color palette.");
+		SetXmasColors(grpNr, random8(1, maxColNr));
+		return;
+	}
+
 	String palKey = "";
 	if (colNr == 1)
 	{
@@ -489,7 +538,7 @@ void SetXmasColors(int grpNr, int colNr)
 	}
 	if (colNr == 2)
 	{
-		palKey = "Ocean1";
+		palKey = "Christmas6";
 	}
 	if (colNr == 3)
 	{
@@ -501,7 +550,7 @@ void SetXmasColors(int grpNr, int colNr)
 	}
 	if (colNr == 5)
 	{
-		palKey = "CozyFire1";
+		palKey = "Christmas7";
 	}
 	Serial.print("Changing color palette to '");
 	Serial.print(palKey);
@@ -521,6 +570,9 @@ void setup()
 #endif
 
 	Serial.begin(115200);
+
+	pinMode(BUTTON_PIN_1, INPUT_PULLUP);
+	pinMode(BUTTON_PIN_2, INPUT_PULLUP);
 
 #if defined(INCLUDE_WIFI_MGR) && !defined(INCLUDE_XMAS_DEMO)
 	InitWifi();
@@ -560,8 +612,8 @@ void setup()
 	neoGroup->Start();
 */
 
-	SetXmasEffect(0, random8(1, 3));
-	SetXmasColors(0, random8(1, 5));
+	SetXmasEffect(0, 0);
+	SetXmasColors(0, 0);
 	startGroup(0);
 #else
 	Serial.println("Xmas Tree not active");
@@ -571,20 +623,61 @@ void setup()
 // Main loop
 void loop()
 {
-	if (!started)
+	static bool button1Pressed = false;
+	static bool button2Pressed = false;
+	static bool bothButtonsPressed = false;
+	bool btn1Pressed = !digitalRead(BUTTON_PIN_1);
+	bool btn2Pressed = !digitalRead(BUTTON_PIN_2);
+	if (bothButtonsPressed &&
+		(!btn1Pressed | !btn2Pressed) /*&&
+		WiFi.status() != WL_CONNECTED*/) // Both buttons pressed
+	{
+		InitWifi(false, true);
+	}
+	else
+	{
+		if (button1Pressed && !btn1Pressed) // Button was released
+		{
+			currFxNr++;
+			if (currFxNr > maxFxNr)
+				currFxNr = 0;
+			Serial.print("Button 'FX' pressed, changing effect number to: ");
+			Serial.println(currFxNr);
+			SetXmasEffect(0, currFxNr, true);
+		}
+		if (button2Pressed && !btn2Pressed) // Button was released
+		{
+			currColNr++;
+			if (currColNr > maxColNr)
+				currColNr = 0;
+			Serial.print("Button 'Colors' pressed, changing color number to: ");
+			Serial.println(currColNr);
+			SetXmasColors(0, currColNr);
+		}
+	}
+	button1Pressed = btn1Pressed;
+	button2Pressed = btn2Pressed;
+	bothButtonsPressed = btn1Pressed & btn2Pressed;
+
+	if (!ledsStarted)
 		return;
 
 #ifdef INCLUDE_XMAS_DEMO
 	if ((millis() - lastUpdate) > updateInterval)
 	{
 		lastUpdate = millis();
+		bool fxChanged = false;
 		if (currFxNr == 0)
 		{
-			SetXmasEffect(0, random8(1, 3));
-			if (currColNr == 0)
-			{
-				SetXmasColors(0, random8(1, 5));
-			}
+			SetXmasEffect(0, 0);
+			fxChanged = true;
+		}
+		if (currColNr == 0)
+		{
+			SetXmasColors(0, 0);
+		}
+		if (fxChanged)
+		{
 			startGroup(0);
 		}
 	}

@@ -4,6 +4,9 @@
 #include <vector>
 #include <map>
 
+#define HALFFAIRY ((CRGB::FairyLight & 0xFEFEFE) / 2)
+#define QUARTERFAIRY ((CRGB::FairyLight & 0xFCFCFC) / 4)
+
 const std::map<String, std::vector<CRGB>> ColorPalettes = {
     {"Pop", {CRGB(0xAAFF00), CRGB(0xFFAA00), CRGB(0xFF00AA), CRGB(0xAA00FF), CRGB(0x00AAFF)}},
     {"DarkRainbow", {CRGB(0x482344), CRGB(0x2B5166), CRGB(0x429867), CRGB(0xFAB243), CRGB(0xE02130)}},
@@ -32,6 +35,8 @@ const std::map<String, std::vector<CRGB>> ColorPalettes = {
     {"Christmas3", {CRGB::Black, CRGB::DarkRed, CRGB::DarkOrange, CRGB::DarkGreen}},
     {"Christmas4", {CRGB::Black, CRGB::DarkViolet, CRGB::DarkRed, CRGB::Black, CRGB::DarkOrange, CRGB::DarkGreen}},
     {"Christmas5", {CRGB::Black, CRGB::DarkViolet, CRGB::DarkRed, CRGB::Black, CRGB::DarkCyan, CRGB::DarkBlue, CRGB::Black, CRGB::DarkOrange, CRGB::DarkGreen}},
+    {"Christmas6", {CRGB::Black, CRGB::DarkRed, CRGB::Gray, CRGB::DarkRed, CRGB::DarkGreen, CRGB::Gray, CRGB::DarkGreen}},
+    {"Christmas7", {CRGB::Black, CRGB::CRGB::FairyLight, HALFFAIRY, CRGB::CRGB::FairyLight, QUARTERFAIRY, CRGB::CRGB::FairyLight}},
 
     // Fires
     {"CozyFire1", {CRGB(0x330A04), CRGB(0x6C1305), CRGB(0xB32900), CRGB(0xDE8531), CRGB(0xEFAC41)}},
