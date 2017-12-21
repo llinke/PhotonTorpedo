@@ -17,6 +17,7 @@ enum pattern
 	STATIC,
 	FADE,
 	WAVE,
+	COLWAVE,
 	RAINBOW,
 	CONFETTI,
 	FIRE
@@ -119,6 +120,14 @@ class NeoGroup
 			Serial.print(GroupID);
 			Serial.println("'.");
 			effectFunc = &NeoGroup::FxWave;
+			fxLength = (length == 0 ? (LedCount * 2) : length);
+		}
+		if (pattern == COLWAVE)
+		{
+			Serial.print("Setting FX 'ColorWave' for group '");
+			Serial.print(GroupID);
+			Serial.println("'.");
+			effectFunc = &NeoGroup::FxColorWaves;
 			fxLength = (length == 0 ? (LedCount * 2) : length);
 		}
 		if (pattern == RAINBOW)
@@ -241,8 +250,9 @@ class NeoGroup
 				{
 					fill_solid(LedFirst, LedCount, 0x000000);
 				}
+				return true; // LEDs updated
 			}
-			return true; // LEDs updated
+			return false; // LEDs not updated
 		}
 
 		if (!Active)
@@ -317,19 +327,25 @@ class NeoGroup
 		}
 	}
 
-	void SetPixel(int pos, CRGB col, mirror mirror = MIRROR0)
+	void SetPixel(int pos, CRGB newcolor, mirror mirror = MIRROR0, bool blend = false)
 	{
 		if (mirror == MIRROR1) // set even/odd as mirror values
 		{
 			int newPos = pos / 2;
 			if ((pos % 2) == 0)
 			{
-				LedFirst[CapLedPosition(newPos + LedOffset)] = col;
+				if (blend)
+					nblend(LedFirst[CapLedPosition(newPos + LedOffset)], newcolor, 128);
+				else
+					LedFirst[CapLedPosition(newPos + LedOffset)] = newcolor;
 			}
 			else
 			{
 				int mirrorPos = LedCount - newPos - 1;
-				LedFirst[CapLedPosition(mirrorPos + LedOffset)] = col;
+				if (blend)
+					nblend(LedFirst[CapLedPosition(mirrorPos + LedOffset)], newcolor, 128);
+				else
+					LedFirst[CapLedPosition(mirrorPos + LedOffset)] = newcolor;
 			}
 			return;
 		}
@@ -337,14 +353,23 @@ class NeoGroup
 		if (mirror == MIRROR2) // mirror each second value
 		{
 			int newPos = pos / 2;
-			LedFirst[CapLedPosition(newPos + LedOffset)] = col;
+			if (blend)
+				nblend(LedFirst[CapLedPosition(newPos + LedOffset)], newcolor, 128);
+			else
+				LedFirst[CapLedPosition(newPos + LedOffset)] = newcolor;
 			int mirrorPos = LedCount - newPos - 1;
-			LedFirst[CapLedPosition(mirrorPos + LedOffset)] = col;
+			if (blend)
+				nblend(LedFirst[CapLedPosition(mirrorPos + LedOffset)], newcolor, 128);
+			else
+				LedFirst[CapLedPosition(mirrorPos + LedOffset)] = newcolor;
 			return;
 		}
 
 		// else
-		LedFirst[CapLedPosition(pos + LedOffset)] = col;
+		if (blend)
+			nblend(LedFirst[CapLedPosition(pos + LedOffset)], newcolor, 128);
+		else
+			LedFirst[CapLedPosition(pos + LedOffset)] = newcolor;
 	}
 
 	int CapLedPosition(int pos)
@@ -414,6 +439,7 @@ class NeoGroup
 		if (random8() < chanceOfGlitter)
 		{
 			LedFirst[random16(LedCount)] += CRGB::White;
+			//SetPixel(random16(LedCount), CRGB::White, MIRROR0, true);
 		}
 	}
 
@@ -423,6 +449,7 @@ class NeoGroup
 		int pos = random16(LedCount);
 		//LedFirst[pos] += CHSV(fxStep + random8(64), 200, 255);
 		LedFirst[pos] += ColorFromPalette(colorPalette, fxStep + random8(64));
+		//SetPixel(pos, ColorFromPalette(colorPalette, fxStep + random8(64)), MIRROR0, true);
 		NextFxStep();
 	}
 
@@ -460,6 +487,60 @@ class NeoGroup
 			SetPixel(j, color, fxMirror);
 		}
 		NextFxStep();
+	}
+
+	void FxColorWaves()
+	{
+		static uint16_t sPseudotime = 0;
+		static uint16_t sLastMillis = 0;
+		static uint16_t sHue16 = 0;
+
+		uint8_t sat8 = beatsin88(87, 220, 250);
+		uint8_t brightdepth = beatsin88(341, 96, 224);
+		uint16_t brightnessthetainc16 = beatsin88(203, (25 * 256), (40 * 256));
+		uint8_t msmultiplier = beatsin88(147, 23, 60);
+
+		uint16_t hue16 = sHue16; //gHue * 256;
+		uint16_t hueinc16 = beatsin88(113, 300, 1500);
+
+		uint16_t ms = millis();
+		uint16_t deltams = ms - sLastMillis;
+		sLastMillis = ms;
+		sPseudotime += deltams * msmultiplier;
+		sHue16 += deltams * beatsin88(400, 5, 9);
+		uint16_t brightnesstheta16 = sPseudotime;
+
+		for (uint16_t i = 0; i < LedCount; i++)
+		{
+			hue16 += hueinc16;
+			uint8_t hue8 = hue16 / 256;
+			uint16_t h16_128 = hue16 >> 7;
+			if (h16_128 & 0x100)
+			{
+				hue8 = 255 - (h16_128 >> 1);
+			}
+			else
+			{
+				hue8 = h16_128 >> 1;
+			}
+
+			brightnesstheta16 += brightnessthetainc16;
+			uint16_t b16 = sin16(brightnesstheta16) + 32768;
+
+			uint16_t bri16 = (uint32_t)((uint32_t)b16 * (uint32_t)b16) / 65536;
+			uint8_t bri8 = (uint32_t)(((uint32_t)bri16) * brightdepth) / 65536;
+			bri8 += (255 - brightdepth);
+
+			uint8_t index = hue8;
+			//index = triwave8( index);
+			index = scale8(index, 240);
+
+			CRGB newcolor = ColorFromPalette(colorPalette, index, bri8);
+			uint16_t pixelnumber = i;
+			pixelnumber = (LedCount - 1) - pixelnumber;
+			//nblend(ledarray[pixelnumber], newcolor, 128);
+			SetPixel(pixelnumber, newcolor, fxMirror, true);
+		}
 	}
 
 	static CRGBPalette16 GenerateRGBPalette(std::vector<CRGB> colors)

@@ -61,7 +61,7 @@ bool ledsStarted = false;
 unsigned long lastUpdate = 0;
 unsigned long updateInterval = AutoChangeInterval * 1000;
 int currFxNr = 0;
-const int maxFxNr = 3;
+const int maxFxNr = 4;
 int currColNr = 0;
 int currFps = 25;
 int currGlitter = 48;
@@ -146,6 +146,7 @@ void InitBlynk()
 	fxItems.add("Welle");
 	fxItems.add("Konfetti");
 	fxItems.add("Blenden");
+	fxItems.add("Farbwelle");
 	Blynk.setProperty(V2, "labels", fxItems);
 
 	Serial.println("Blynk: assigning dropdown 'Colors'");
@@ -432,6 +433,8 @@ int setEffectParticle(String args)
 		fxPattern = pattern::FADE;
 	if (fxName == "wave")
 		fxPattern = pattern::WAVE;
+	if (fxName == "colwave")
+		fxPattern = pattern::COLWAVE;
 	if (fxName == "rainbow")
 		fxPattern = pattern::RAINBOW;
 	if (fxName == "confetti")
@@ -550,7 +553,7 @@ void SetXmasEffect(int grpNr, int fxNr, bool startFx = false)
 	{
 		fxPatternName = "Wave";
 		fxPattern = pattern::WAVE;
-		fxLength = 48;
+		fxLength = /*48*/ (pixelCount * 1.5);
 		fxMirror = mirror::MIRROR2;
 	}
 	if (fxNr == 2) // confetti
@@ -563,6 +566,13 @@ void SetXmasEffect(int grpNr, int fxNr, bool startFx = false)
 	{
 		fxPatternName = "Fade";
 		fxPattern = pattern::FADE;
+	}
+	if (fxNr == 4) // ColorWave
+	{
+		fxPatternName = "ColorWave";
+		fxPattern = pattern::COLWAVE;
+		fxLength = /*48*/ (pixelCount * 1.5);
+		fxMirror = mirror::MIRROR1;
 	}
 	Serial.print("Changing effect palette to '");
 	Serial.print(fxPatternName);
@@ -777,6 +787,7 @@ BLYNK_WRITE(V7) // Slider "FPS"
 BLYNK_APP_CONNECTED()
 {
 	SendStatusToBlynk();
+	//Blynk.syncAll();
 }
 
 void setup()
@@ -840,10 +851,6 @@ void setup()
 // Main loop
 void loop()
 {
-#ifdef INCLUDE_WIFI_MGR
-	Blynk.run();
-#endif
-
 	static bool button1Pressed = false;
 	static bool button2Pressed = false;
 	static bool bothButtonsPressed = false;
@@ -914,6 +921,18 @@ void loop()
 	{
 		//Serial.print("Refreshing LEDs.");
 		FastLED.show();
+	}
+	else
+	{
+#ifdef INCLUDE_WIFI_MGR
+		static int lastBlynkUpdate = 0;
+		if ((millis() - lastBlynkUpdate) > 50)
+		{
+			lastBlynkUpdate = millis();
+			//Serial.println("BLYNK: Blynk.Run()");
+			Blynk.run();
+		}
+#endif
 	}
 	//pixelCount = count; //PIXEL_COUNT;
 	groupCount = neoGroups.size() - 1; // Don't count main group (all LEDs)
