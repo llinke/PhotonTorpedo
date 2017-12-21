@@ -43,7 +43,8 @@ char blynkAuth[] = "4abfe0577ae745aca3d5d5d9f37911b7";
 //SYSTEM_MODE(AUTOMATIC);
 
 const int ConfigureAPTimeout = 10;
-const int AutoChangeInterval = 15;
+const int AutoChangeIntervalFx = 60;
+const int AutoChangeIntervalCol = 20;
 
 //int ByteReceived;
 
@@ -58,13 +59,15 @@ int pixelCount = PIXEL_COUNT;
 bool ledsInitialized = false;
 bool ledsStarted = false;
 #ifdef INCLUDE_XMAS_DEMO
-unsigned long lastUpdate = 0;
-unsigned long updateInterval = AutoChangeInterval * 1000;
+unsigned long lastUpdateFx = 0;
+unsigned long updateIntervalFx = AutoChangeIntervalFx * 1000;
+unsigned long lastUpdateCol = 0;
+unsigned long updateIntervalCol = AutoChangeIntervalCol * 1000;
 int currFxNr = 0;
 const int maxFxNr = 4;
 int currColNr = 0;
 int currFps = 25;
-int currGlitter = 48;
+int currGlitter = 32; //48;
 const int maxColNr = 5;
 #endif
 
@@ -88,9 +91,10 @@ JsonObject &parseArgs(String args)
 #ifdef INCLUDE_WIFI_MGR
 bool InitWifi(bool useWifiCfgTimeout = true, bool forceReconnect = false)
 {
+	Serial.println("WIFI ------------------------------------------------------");
 	if (!forceReconnect && WiFi.status() == WL_CONNECTED)
 	{
-		Serial.print("WiFi is already connected...");
+		Serial.println("WiFi: already connected...");
 		return true; // Is already connected...
 	}
 
@@ -108,10 +112,10 @@ bool InitWifi(bool useWifiCfgTimeout = true, bool forceReconnect = false)
 	//fetches ssid and pass from eeprom and tries to connect
 	//if it does not connect it starts an access point with the specified name
 	//here  "AutoConnectAP" and goes into a blocking loop awaiting configuration
-	Serial.print("WiFi Manager trying to connect...");
+	Serial.println("WiFi Manager trying to connect...");
 	if (useWifiCfgTimeout)
 	{
-		Serial.print("Yyou have ");
+		Serial.print("You have ");
 		Serial.print(ConfigureAPTimeout);
 		Serial.println(" seconds for configuration if required.");
 		wifiManager.setConfigPortalTimeout(ConfigureAPTimeout);
@@ -125,17 +129,18 @@ bool InitWifi(bool useWifiCfgTimeout = true, bool forceReconnect = false)
 		fill_solid(leds, pixelCount, connected ? CRGB::Green : CRGB::Red);
 		FastLED.show();
 	}
-	delay(5000);
 	if (connected)
-		Serial.println("Connected to WiFi...yay!!!");
+		Serial.println("Wifi is connected...yay!!!");
 	else
-		Serial.println("NOT CONNECTED!!");
+		Serial.println("!!! WIFI NOT CONNECTED !!!");
+	delay(5000);
 
 	return connected;
 }
 
 void InitBlynk()
 {
+	Serial.println("BLYNK -----------------------------------------------------");
 	Serial.println("Blynk: authenticating");
 	Blynk.config(blynkAuth);
 	Blynk.connect();
@@ -143,10 +148,10 @@ void InitBlynk()
 	Serial.println("Blynk: assigning dropdown 'FX'");
 	BlynkParamAllocated fxItems(128);
 	fxItems.add("Zufällig");
+	fxItems.add("Dynamisch");
 	fxItems.add("Welle");
 	fxItems.add("Konfetti");
-	fxItems.add("Blenden");
-	fxItems.add("Farbwelle");
+	fxItems.add("Farbwechsel");
 	Blynk.setProperty(V2, "labels", fxItems);
 
 	Serial.println("Blynk: assigning dropdown 'Colors'");
@@ -180,6 +185,7 @@ int initStrip(int ledCount, bool doStart = false, bool playDemo = true)
 		return doStart ? startStrip() : pixelCount;
 	}
 
+	Serial.println("LEDStrip --------------------------------------------------");
 	Serial.println("Allocating memory for LED strip data.");
 	leds = (struct CRGB *)malloc(ledCount * sizeof(struct CRGB));
 	Serial.println("Assigning LEDs to FastLED.");
@@ -222,7 +228,7 @@ int initStrip(int ledCount, bool doStart = false, bool playDemo = true)
 		FastLED.show();
 	}
 
-	Serial.println("Adding group 0 for all LEDs.");
+	Serial.println("Adding group 0 spanning all LEDs.");
 	int offset = 4;
 	neoGroups.clear();
 	// Group 0: all LEDs
@@ -433,8 +439,8 @@ int setEffectParticle(String args)
 		fxPattern = pattern::FADE;
 	if (fxName == "wave")
 		fxPattern = pattern::WAVE;
-	if (fxName == "colwave")
-		fxPattern = pattern::COLWAVE;
+	if (fxName == "dynwave")
+		fxPattern = pattern::DYNAMICWAVE;
 	if (fxName == "rainbow")
 		fxPattern = pattern::RAINBOW;
 	if (fxName == "confetti")
@@ -533,11 +539,12 @@ void RegisterPhotonFunctions()
 #ifdef INCLUDE_XMAS_DEMO
 void SetXmasEffect(int grpNr, int fxNr, bool startFx = false)
 {
-	Serial.println("Configuring LED effect");
+	Serial.println("XMAS-FX ---------------------------------------------------");
+	Serial.println("XmasFx: Configuring LED effect");
 
 	if (fxNr == 0)
 	{
-		Serial.println("Choosing random effect.");
+		Serial.println("XmasFx: Choosing random effect.");
 		SetXmasEffect(grpNr, random8(1, maxFxNr), startFx);
 		return;
 	}
@@ -549,32 +556,32 @@ void SetXmasEffect(int grpNr, int fxNr, bool startFx = false)
 	uint8_t fxFps = currFps;
 	mirror fxMirror = MIRROR0;
 
-	if (fxNr == 1) // Wave
+	if (fxNr == 1) // Dynamic Wave
+	{
+		fxPatternName = "Dynamic Wave";
+		fxPattern = pattern::DYNAMICWAVE;
+		fxLength = (pixelCount * 1.5); // 48;
+		fxMirror = mirror::MIRROR1;	// mirror::MIRROR0;
+	}
+	if (fxNr == 2) // Wave
 	{
 		fxPatternName = "Wave";
 		fxPattern = pattern::WAVE;
-		fxLength = /*48*/ (pixelCount * 1.5);
+		fxLength = (pixelCount * 1.5); // 48;
 		fxMirror = mirror::MIRROR2;
 	}
-	if (fxNr == 2) // confetti
+	if (fxNr == 3) // confetti
 	{
 		fxPatternName = "Confetti";
 		fxPattern = pattern::CONFETTI;
 		fxGlitter = 0;
 	}
-	if (fxNr == 3) // Fade
+	if (fxNr == 4) // Fade
 	{
 		fxPatternName = "Fade";
 		fxPattern = pattern::FADE;
 	}
-	if (fxNr == 4) // ColorWave
-	{
-		fxPatternName = "ColorWave";
-		fxPattern = pattern::COLWAVE;
-		fxLength = /*48*/ (pixelCount * 1.5);
-		fxMirror = mirror::MIRROR0;
-	}
-	Serial.print("Changing effect palette to '");
+	Serial.print("XmasFx: Changing effect to '");
 	Serial.print(fxPatternName);
 	Serial.println("'");
 	setEffect(
@@ -591,11 +598,12 @@ void SetXmasEffect(int grpNr, int fxNr, bool startFx = false)
 
 void SetXmasColors(int grpNr, int colNr)
 {
-	Serial.println("Configuring LED colors");
+	Serial.println("XMAS-COL --------------------------------------------------");
+	Serial.println("XmasCol: Configuring LED colors");
 
 	if (colNr == 0)
 	{
-		Serial.println("Choosing random color palette.");
+		Serial.println("XmasCol: Choosing random color palette.");
 		SetXmasColors(grpNr, random8(1, maxColNr));
 		return;
 	}
@@ -621,7 +629,7 @@ void SetXmasColors(int grpNr, int colNr)
 	{
 		palKey = "Christmas7";
 	}
-	Serial.print("Changing color palette to '");
+	Serial.print("XmasCol: Changing color palette to '");
 	Serial.print(palKey);
 	Serial.println("'");
 	if (ColorPalettes.find(palKey) != ColorPalettes.end())
@@ -644,7 +652,7 @@ void NextXmasEffect(int nextFx = -1)
 	}
 	if (currFxNr > maxFxNr)
 		currFxNr = 0;
-	Serial.print("Button 'FX' pressed, changing effect number to: ");
+	Serial.print("CONTROL: Button 'FX' pressed, changing effect number to: ");
 	Serial.println(currFxNr);
 	SetXmasEffect(0, currFxNr, true);
 }
@@ -661,7 +669,7 @@ void NextXmasColor(int nextCol = -1)
 	}
 	if (currColNr > maxColNr)
 		currColNr = 0;
-	Serial.print("Button 'Colors' pressed, changing color number to: ");
+	Serial.print("CONTROL: Button 'Colors' pressed, changing color number to: ");
 	Serial.println(currColNr);
 	SetXmasColors(0, currColNr);
 }
@@ -695,6 +703,7 @@ BLYNK_READ(V0)
 BLYNK_WRITE(V0) // Button "Power"
 {
 	int pinValue = param.asInt();
+	Serial.println("BLYNK -----------------------------------------------------");
 	Serial.print("Blynk-Button 'POWER' pressed: ");
 	Serial.println(pinValue);
 	if (pinValue == 1)
@@ -718,6 +727,7 @@ BLYNK_WRITE(V0) // Button "Power"
 BLYNK_WRITE(V1) // Button "FX"
 {
 	int pinValue = param.asInt();
+	Serial.println("BLYNK -----------------------------------------------------");
 	Serial.print("Blynk-Button 'FX' pressed: ");
 	Serial.println(pinValue);
 	if (pinValue == 1)
@@ -730,6 +740,7 @@ BLYNK_WRITE(V1) // Button "FX"
 BLYNK_WRITE(V2) // DropDown "FX"
 {
 	int pinValue = param.asInt() - 1;
+	Serial.println("BLYNK -----------------------------------------------------");
 	Serial.print("Blynk-DropDown 'FX' selected: ");
 	Serial.println(pinValue);
 	NextXmasEffect(pinValue);
@@ -738,6 +749,7 @@ BLYNK_WRITE(V2) // DropDown "FX"
 BLYNK_WRITE(V3) // Button "Color"
 {
 	int pinValue = param.asInt();
+	Serial.println("BLYNK -----------------------------------------------------");
 	Serial.print("Blynk-Button 'Colors' pressed: ");
 	Serial.println(pinValue);
 	if (pinValue == 1)
@@ -750,6 +762,7 @@ BLYNK_WRITE(V3) // Button "Color"
 BLYNK_WRITE(V4) // DropDown "Colors"
 {
 	int pinValue = param.asInt() - 1;
+	Serial.println("BLYNK -----------------------------------------------------");
 	Serial.print("Blynk-DropDown 'Colors' selected: ");
 	Serial.println(pinValue);
 	NextXmasColor(pinValue);
@@ -758,27 +771,30 @@ BLYNK_WRITE(V4) // DropDown "Colors"
 BLYNK_WRITE(V5) // Slider "Glitter"
 {
 	int pinValue = param.asInt();
+	Serial.println("BLYNK -----------------------------------------------------");
 	Serial.print("Blynk-Slider 'Glitter' selected: ");
 	Serial.println(pinValue);
-	currFps = pinValue;
+	currGlitter = pinValue;
 	NeoGroup *neoGroup = &(neoGroups.at(0));
-	neoGroup->ChangeGlitter(currFps);
+	neoGroup->ChangeGlitter(currGlitter);
 }
 
 BLYNK_WRITE(V6) // Slider "Brightness"
 {
 	int pinValue = param.asInt();
-	globalBrightness = pinValue;
+	Serial.println("BLYNK -----------------------------------------------------");
 	Serial.print("Blynk-Slider 'Brightness' selected: ");
 	Serial.println(pinValue);
+	globalBrightness = pinValue;
 	FastLED.setBrightness(pinValue);
 	FastLED.setDither(0);
 }
 
-BLYNK_WRITE(V7) // Slider "FPS"
+BLYNK_WRITE(V7) // Slider "Speed"
 {
 	int pinValue = param.asInt();
-	Serial.print("Blynk-Slider 'Brightness' selected: ");
+	Serial.println("BLYNK -----------------------------------------------------");
+	Serial.print("Blynk-Slider 'Speed' selected: ");
 	Serial.println(pinValue);
 	currFps = pinValue;
 	NeoGroup *neoGroup = &(neoGroups.at(0));
@@ -808,18 +824,18 @@ void setup()
 
 #ifdef INCLUDE_XMAS_DEMO
 	// TEST: Christmas Effects
-	Serial.println("Setting up Xmas Tree for Arduino");
-	Serial.println("Initializing LED strip");
+	Serial.println("BOOT/SETUP ------------------------------------------------");
+	Serial.println("Setup: Setting up Xmas Tree for Arduino");
+	Serial.println("Setup: Initializing LED strip");
 	initStrip(32, true, true);
-	Serial.print("LEDs: ");
-	Serial.print(pixelCount);
-	Serial.println("");
+	Serial.print("Setup: Amount of LEDs: ");
+	Serial.println(pixelCount);
 
-	Serial.println("Starting LED strip");
+	Serial.println("Setup: Starting LED strip");
 	startStrip();
 
 	/*
-	Serial.println("Configuring LED effect");
+	Serial.println("Setup: Configuring LED effect");
 	pattern fxPattern = pattern::WAVE;
 	int fxLength = 48;
 	int fxGlitter = 48;
@@ -828,7 +844,7 @@ void setup()
 	NeoGroup *neoGroup = &(neoGroups.at(0));
 	neoGroup->ConfigureEffect(fxPattern, fxLength, fxGlitter, fxFps, direction::FORWARD, fxMirror);
 
-	Serial.println("Configuring LED colors");
+	Serial.println("Setup: Configuring LED colors");
 	String palKey = "Christmas5";
 	if (ColorPalettes.find(palKey) != ColorPalettes.end())
 	{
@@ -836,7 +852,7 @@ void setup()
 		neoGroup->ConfigureColors(colors, true, true);
 	}
 
-	Serial.println("Starting LED effect");
+	Serial.println("Setup: Starting LED effect");
 	neoGroup->Start();
 */
 
@@ -844,7 +860,7 @@ void setup()
 	SetXmasColors(0, 0);
 	startGroup(0);
 #else
-	Serial.println("Xmas Tree not active");
+	Serial.println("Setup: Xmas Tree not active");
 #endif
 }
 
@@ -854,12 +870,14 @@ void loop()
 	static bool button1Pressed = false;
 	static bool button2Pressed = false;
 	static bool bothButtonsPressed = false;
+	//Serial.println("LOOP ------------------------------------------------------");
 	bool btn1Pressed = !digitalRead(BUTTON_PIN_1);
 	bool btn2Pressed = !digitalRead(BUTTON_PIN_2);
 	if (bothButtonsPressed &&
 		(!btn1Pressed | !btn2Pressed) /*&&
 		WiFi.status() != WL_CONNECTED*/) // Both buttons pressed
 	{
+		Serial.println("Loop: both buttons pressed, entering WiFi-setup.");
 		if (InitWifi(false, true))
 			InitBlynk();
 	}
@@ -867,10 +885,12 @@ void loop()
 	{
 		if (button1Pressed && !btn1Pressed) // Button was released
 		{
+			Serial.println("Loop: button 'FX' pressed and released.");
 			NextXmasEffect();
 		}
 		if (button2Pressed && !btn2Pressed) // Button was released
 		{
+			Serial.println("Loop: button 'colors' pressed and releases.");
 			NextXmasColor();
 		}
 	}
@@ -882,23 +902,29 @@ void loop()
 		return;
 
 #ifdef INCLUDE_XMAS_DEMO
-	if ((millis() - lastUpdate) > updateInterval)
+	bool fxChanged = false;
+	if ((millis() - lastUpdateFx) > updateIntervalFx)
 	{
-		lastUpdate = millis();
-		bool fxChanged = false;
+		lastUpdateFx = millis();
+		Serial.println("Loop: time to change Xmas FX.");
 		if (currFxNr == 0)
 		{
 			SetXmasEffect(0, 0);
 			fxChanged = true;
 		}
+	}
+	if ((millis() - lastUpdateCol) > updateIntervalCol)
+	{
+		lastUpdateCol = millis();
+		Serial.println("Loop: time to change Xmas Colors.");
 		if (currColNr == 0)
 		{
 			SetXmasColors(0, 0);
 		}
-		if (fxChanged)
-		{
-			startGroup(0);
-		}
+	}
+	if (fxChanged)
+	{
+		startGroup(0);
 	}
 #endif
 
@@ -919,7 +945,7 @@ void loop()
 	}
 	if (ledsUpdated)
 	{
-		//Serial.print("Refreshing LEDs.");
+		//Serial.print("Loop: Refreshing LEDs.");
 		FastLED.show();
 	}
 	else
@@ -929,7 +955,7 @@ void loop()
 		if ((millis() - lastBlynkUpdate) > 50)
 		{
 			lastBlynkUpdate = millis();
-			//Serial.println("BLYNK: Blynk.Run()");
+			//Serial.println("Loop: Blynk.Run()");
 			Blynk.run();
 		}
 #endif

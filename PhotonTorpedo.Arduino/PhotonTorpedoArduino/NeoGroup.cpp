@@ -17,7 +17,7 @@ enum pattern
 	STATIC,
 	FADE,
 	WAVE,
-	COLWAVE,
+	DYNAMICWAVE,
 	RAINBOW,
 	CONFETTI,
 	FIRE
@@ -57,8 +57,9 @@ class NeoGroup
 	mirror fxMirror = MIRROR0;
 
 	//std::vector<CRGB> currentColors = {};
-	std::vector<CRGB> currentColors;
-	CRGBPalette16 colorPalette;
+	std::vector<CRGB> currentColors = {0x000000, 0x000000};
+	CRGBPalette16 colorPalette = CRGBPalette16();
+	CRGBPalette16 colorPaletteNew = CRGBPalette16();
 	uint8_t firePaletteNr = 6;
 
 	void (NeoGroup::*effectFunc)();
@@ -77,6 +78,7 @@ class NeoGroup
 		LedCount = ledCount;
 		LedOffset = ledOffset;
 		totalFxSteps = LedCount;
+		colorPalette = GenerateRGBPalette({0x000000, 0x000000});
 	}
 
 	uint16_t ConfigureEffect(
@@ -122,9 +124,9 @@ class NeoGroup
 			effectFunc = &NeoGroup::FxWave;
 			fxLength = (length == 0 ? (LedCount * 2) : length);
 		}
-		if (pattern == COLWAVE)
+		if (pattern == DYNAMICWAVE)
 		{
-			Serial.print("Setting FX 'ColorWave' for group '");
+			Serial.print("Setting FX 'Dynamic Wave' for group '");
 			Serial.print(GroupID);
 			Serial.println("'.");
 			effectFunc = &NeoGroup::FxColorWaves;
@@ -183,13 +185,13 @@ class NeoGroup
 			if (colors.size() != 0)
 			{
 				Serial.println("Generating color palette from colors.");
-				colorPalette = GenerateRGBPalette(currentColors);
+				colorPaletteNew = GenerateRGBPalette(currentColors);
 			}
 			else
 			{
 				Serial.println("No colors, using empty list.");
 				//colorPalette = NULL;
-				colorPalette = CRGBPalette16();
+				colorPaletteNew = CRGBPalette16();
 			}
 		}
 		return currentColors.size();
@@ -264,6 +266,10 @@ class NeoGroup
 		if ((millis() - lastUpdate) > updateInterval)
 		{
 			lastUpdate = millis();
+
+			// Cross-fade to new palette
+			nblendPaletteTowardPalette(colorPalette, colorPaletteNew, 16);
+
 			if (effectFunc != NULL)
 			{
 				(this->*effectFunc)();
