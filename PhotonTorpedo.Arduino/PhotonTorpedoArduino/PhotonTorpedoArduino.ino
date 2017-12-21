@@ -28,7 +28,17 @@
 #define BLYNK_PRINT Serial
 #define BLYNK_MAX_SENDBYTES 256 // Default is 128
 #include <BlynkSimpleEsp8266.h>
+
+// Device 'XmasTree FBS43':
 char blynkAuth[] = "4abfe0577ae745aca3d5d5d9f37911b7";
+// Device 'XmasTree EFB':
+// char blynkAuth[] = "7b8bd1934e8b4cf284dfa96471effc3f";
+// Device 'XmasTree BNL':
+// char blynkAuth[] = "a43bbc5bd9f04c8cb8b00dbe4add9da8";
+// Device 'XmasTree SB':
+// char blynkAuth[] = "fd6d6a43b6b4474aa708261839a736a9";
+// Device 'XmasTree JL':
+// char blynkAuth[] = "a652e6db9a0d435986feeb6866896e85";
 
 //SYSTEM_MODE(AUTOMATIC);
 
