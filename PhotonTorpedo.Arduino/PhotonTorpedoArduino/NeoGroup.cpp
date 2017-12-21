@@ -40,8 +40,8 @@ class NeoGroup
 {
 #define FIRE_COOLING 55
 #define FIRE_SPARKING 120
-#define FADEOUT_DURATION 1000
-#define FADEOUT_STEPS 20
+#define FADEOUT_DURATION 500
+#define FADEOUT_STEPS 16
 
 	CRGB *LedFirst;
 	int LedOffset = 0;
@@ -230,7 +230,7 @@ class NeoGroup
 		Serial.print(GroupID);
 		Serial.println("'.");
 		Active = false;
-		fxFadeOut = (stopNow) ? 0 : FADEOUT_STEPS * 2;
+		fxFadeOut = (stopNow) ? 0 : FADEOUT_STEPS;
 		if (stopNow)
 		{
 			fill_solid(LedFirst, LedCount, 0x000000);
@@ -244,7 +244,7 @@ class NeoGroup
 			if ((millis() - lastUpdate) > (FADEOUT_DURATION / FADEOUT_STEPS))
 			{
 				lastUpdate = millis();
-				fadeToBlackBy(LedFirst, LedCount, FADEOUT_STEPS);
+				fadeToBlackBy(LedFirst, LedCount, (1024 / FADEOUT_STEPS));
 				fxFadeOut--;
 				if (fxFadeOut == 0)
 				{

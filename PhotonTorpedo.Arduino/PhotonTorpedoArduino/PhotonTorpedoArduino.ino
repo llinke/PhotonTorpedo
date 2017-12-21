@@ -572,7 +572,7 @@ void SetXmasEffect(int grpNr, int fxNr, bool startFx = false)
 		fxPatternName = "ColorWave";
 		fxPattern = pattern::COLWAVE;
 		fxLength = /*48*/ (pixelCount * 1.5);
-		fxMirror = mirror::MIRROR1;
+		fxMirror = mirror::MIRROR0;
 	}
 	Serial.print("Changing effect palette to '");
 	Serial.print(fxPatternName);
