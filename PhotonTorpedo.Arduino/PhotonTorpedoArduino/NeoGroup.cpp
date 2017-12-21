@@ -221,7 +221,7 @@ class NeoGroup
 		Serial.print(GroupID);
 		Serial.println("'.");
 		Active = false;
-		fxFadeOut = (stopNow) ? 0 : FADEOUT_STEPS;
+		fxFadeOut = (stopNow) ? 0 : FADEOUT_STEPS * 2;
 		if (stopNow)
 		{
 			fill_solid(LedFirst, LedCount, 0x000000);

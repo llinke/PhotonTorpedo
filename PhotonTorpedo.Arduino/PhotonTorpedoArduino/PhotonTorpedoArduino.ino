@@ -26,6 +26,7 @@
 #endif
 
 #define BLYNK_PRINT Serial
+#define BLYNK_MAX_SENDBYTES 256 // Default is 128
 #include <BlynkSimpleEsp8266.h>
 char blynkAuth[] = "4abfe0577ae745aca3d5d5d9f37911b7";
 
@@ -52,6 +53,8 @@ unsigned long updateInterval = AutoChangeInterval * 1000;
 int currFxNr = 0;
 const int maxFxNr = 3;
 int currColNr = 0;
+int currFps = 25;
+int currGlitter = 48;
 const int maxColNr = 5;
 #endif
 
@@ -120,6 +123,43 @@ bool InitWifi(bool useWifiCfgTimeout = true, bool forceReconnect = false)
 
 	return connected;
 }
+
+void InitBlynk()
+{
+	Serial.println("Blynk: authenticating");
+	Blynk.config(blynkAuth);
+	Blynk.connect();
+
+	Serial.println("Blynk: assigning dropdown 'FX'");
+	BlynkParamAllocated fxItems(128);
+	fxItems.add("Zufällig");
+	fxItems.add("Welle");
+	fxItems.add("Konfetti");
+	fxItems.add("Blenden");
+	Blynk.setProperty(V2, "labels", fxItems);
+
+	Serial.println("Blynk: assigning dropdown 'Colors'");
+	BlynkParamAllocated colItems(128);
+	colItems.add("Zufällig");
+	colItems.add("Farbschema 1");
+	colItems.add("Farbschema 2");
+	colItems.add("Farbschema 3");
+	colItems.add("Farbschema 4");
+	colItems.add("Farbschema 5");
+	Blynk.setProperty(V4, "labels", colItems);
+
+	SendStatusToBlynk();
+}
+void SendStatusToBlynk()
+{
+	Serial.println("Blynk: sending current status");
+	Blynk.virtualWrite(V0, ledsStarted);
+	Blynk.virtualWrite(V2, currFxNr + 1);
+	Blynk.virtualWrite(V4, currColNr + 1);
+	Blynk.virtualWrite(V5, currGlitter);
+	Blynk.virtualWrite(V6, globalBrightness);
+	Blynk.virtualWrite(V7, currFps);
+}
 #endif
 
 int initStrip(int ledCount, bool doStart = false, bool playDemo = true)
@@ -155,7 +195,7 @@ int initStrip(int ledCount, bool doStart = false, bool playDemo = true)
 	}
 #if defined(INCLUDE_WIFI_MGR) && defined(INCLUDE_XMAS_DEMO)
 	if (InitWifi())
-		Blynk.config(blynkAuth);
+		InitBlynk();
 #endif
 	if (playDemo)
 	{
@@ -256,8 +296,10 @@ int setEffect(
 	NeoGroup *neoGroup = &(neoGroups.at(grpNr));
 	neoGroup->Stop();
 
-	int fxGlitter = amountglitter <= 0 ? neoGroup->GetGlitter() : amountglitter;
-	uint8_t fxFps = fps <= 0 ? neoGroup->GetFps() : fps;
+	//int fxGlitter = amountglitter <= 0 ? neoGroup->GetGlitter() : amountglitter;
+	int fxGlitter = amountglitter <= 0 ? currGlitter : amountglitter;
+	//uint8_t fxFps = fps <= 0 ? neoGroup->GetFps() : fps;
+	uint8_t fxFps = fps <= 0 ? currFps : fps;
 
 	uint16_t result = neoGroup->ConfigureEffect(pattern, length, fxGlitter, fxFps, direction, mirror);
 	//neoGroup->Start();
@@ -490,23 +532,24 @@ void SetXmasEffect(int grpNr, int fxNr, bool startFx = false)
 	String fxPatternName = "";
 	pattern fxPattern = pattern::STATIC;
 	uint16_t fxLength = 255;
-	int fxGlitter = 48;
-	uint8_t fxFps = 25;
+	int fxGlitter = currGlitter;
+	uint8_t fxFps = currFps;
 	mirror fxMirror = MIRROR0;
 
-	if (fxNr == 1)
+	if (fxNr == 1) // Wave
 	{
 		fxPatternName = "Wave";
 		fxPattern = pattern::WAVE;
 		fxLength = 48;
 		fxMirror = mirror::MIRROR2;
 	}
-	if (fxNr == 2)
+	if (fxNr == 2) // confetti
 	{
 		fxPatternName = "Confetti";
 		fxPattern = pattern::CONFETTI;
+		fxGlitter = 0;
 	}
-	if (fxNr == 3)
+	if (fxNr == 3) // Fade
 	{
 		fxPatternName = "Fade";
 		fxPattern = pattern::FADE;
@@ -569,9 +612,16 @@ void SetXmasColors(int grpNr, int colNr)
 }
 #endif
 
-void NextXmasEffect()
+void NextXmasEffect(int nextFx = -1)
 {
-	currFxNr++;
+	if (nextFx < 0)
+	{
+		currFxNr++;
+	}
+	else
+	{
+		currFxNr = nextFx;
+	}
 	if (currFxNr > maxFxNr)
 		currFxNr = 0;
 	Serial.print("Button 'FX' pressed, changing effect number to: ");
@@ -579,9 +629,16 @@ void NextXmasEffect()
 	SetXmasEffect(0, currFxNr, true);
 }
 
-void NextXmasColor()
+void NextXmasColor(int nextCol = -1)
 {
-	currColNr++;
+	if (nextCol < 0)
+	{
+		currColNr++;
+	}
+	else
+	{
+		currColNr = nextCol;
+	}
 	if (currColNr > maxColNr)
 		currColNr = 0;
 	Serial.print("Button 'Colors' pressed, changing color number to: ");
@@ -589,23 +646,129 @@ void NextXmasColor()
 	SetXmasColors(0, currColNr);
 }
 
-BLYNK_WRITE(V1)
+/*
+BLYNK_READ(V0)
+{
+	Blynk.virtualWrite(V0, ledsStarted);
+}
+BLYNK_READ(V2)
+{
+	Blynk.virtualWrite(V2, currFxNr + 1);
+}
+BLYNK_READ(V4)
+{
+	Blynk.virtualWrite(V4, currColNr + 1);
+}
+BLYNK_READ(V5)
+{
+	Blynk.virtualWrite(V5, currGlitter);
+}
+BLYNK_READ(V6)
+{
+	Blynk.virtualWrite(V6, globalBrightness);
+}
+BLYNK_READ(V0)
+{
+	Blynk.virtualWrite(V7, currFps);
+}
+*/
+BLYNK_WRITE(V0) // Button "Power"
+{
+	int pinValue = param.asInt();
+	Serial.print("Blynk-Button 'POWER' pressed: ");
+	Serial.println(pinValue);
+	if (pinValue == 1)
+	{
+		if (!ledsStarted)
+		{
+			startStrip();
+			startGroup(0);
+		}
+	}
+	else
+	{
+		if (ledsStarted)
+		{
+			stopGroup(0);
+			stopStrip();
+		}
+	}
+}
+
+BLYNK_WRITE(V1) // Button "FX"
 {
 	int pinValue = param.asInt();
 	Serial.print("Blynk-Button 'FX' pressed: ");
 	Serial.println(pinValue);
 	if (pinValue == 1)
+	{
 		NextXmasEffect();
+		Blynk.virtualWrite(V2, currFxNr + 1);
+	}
 }
 
-BLYNK_WRITE(V3)
+BLYNK_WRITE(V2) // DropDown "FX"
+{
+	int pinValue = param.asInt() - 1;
+	Serial.print("Blynk-DropDown 'FX' selected: ");
+	Serial.println(pinValue);
+	NextXmasEffect(pinValue);
+}
+
+BLYNK_WRITE(V3) // Button "Color"
 {
 	int pinValue = param.asInt();
 	Serial.print("Blynk-Button 'Colors' pressed: ");
 	Serial.println(pinValue);
 	if (pinValue == 1)
+	{
 		NextXmasColor();
+		Blynk.virtualWrite(V4, currColNr + 1);
+	}
 }
+
+BLYNK_WRITE(V4) // DropDown "Colors"
+{
+	int pinValue = param.asInt() - 1;
+	Serial.print("Blynk-DropDown 'Colors' selected: ");
+	Serial.println(pinValue);
+	NextXmasColor(pinValue);
+}
+
+BLYNK_WRITE(V5) // Slider "Glitter"
+{
+	int pinValue = param.asInt();
+	Serial.print("Blynk-Slider 'Glitter' selected: ");
+	Serial.println(pinValue);
+	currFps = pinValue;
+	NeoGroup *neoGroup = &(neoGroups.at(0));
+	neoGroup->ChangeGlitter(currFps);
+}
+
+BLYNK_WRITE(V6) // Slider "Brightness"
+{
+	int pinValue = param.asInt();
+	globalBrightness = pinValue;
+	Serial.print("Blynk-Slider 'Brightness' selected: ");
+	Serial.println(pinValue);
+	FastLED.setBrightness(pinValue);
+	FastLED.setDither(0);
+}
+
+BLYNK_WRITE(V7) // Slider "FPS"
+{
+	int pinValue = param.asInt();
+	Serial.print("Blynk-Slider 'Brightness' selected: ");
+	Serial.println(pinValue);
+	currFps = pinValue;
+	NeoGroup *neoGroup = &(neoGroups.at(0));
+	neoGroup->ChangeFps(currFps);
+}
+BLYNK_APP_CONNECTED()
+{
+	SendStatusToBlynk();
+}
+
 void setup()
 {
 #ifdef INCLUDE_PHOTON
@@ -619,7 +782,7 @@ void setup()
 
 #if defined(INCLUDE_WIFI_MGR) && !defined(INCLUDE_XMAS_DEMO)
 	if (InitWifi())
-		Blynk.config(blynkAuth);
+		InitBlynk();
 #endif
 
 #ifdef INCLUDE_XMAS_DEMO
@@ -681,7 +844,7 @@ void loop()
 		WiFi.status() != WL_CONNECTED*/) // Both buttons pressed
 	{
 		if (InitWifi(false, true))
-			Blynk.config(blynkAuth);
+			InitBlynk();
 	}
 	else
 	{
