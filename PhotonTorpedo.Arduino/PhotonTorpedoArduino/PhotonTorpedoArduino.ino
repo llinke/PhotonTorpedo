@@ -26,7 +26,7 @@
 #endif
 
 #define BLYNK_PRINT Serial
-#define BLYNK_MAX_SENDBYTES 256 // Default is 128
+#define BLYNK_MAX_SENDBYTES 512 // Default is 128
 #include <BlynkSimpleEsp8266.h>
 
 // Device 'XmasTree FBS43':
@@ -160,11 +160,10 @@ void InitBlynk()
 	Serial.println("Blynk: assigning dropdown 'Colors'");
 	BlynkParamAllocated colItems(128);
 	colItems.add("Zufällig");
-	colItems.add("Farbschema 1");
-	colItems.add("Farbschema 2");
-	colItems.add("Farbschema 3");
-	colItems.add("Farbschema 4");
-	colItems.add("Farbschema 5");
+	for (int i = 0; i < XmasColorNames.size(); i++)
+	{
+		colItems.add(XmasColorNames[i]);
+	}
 	Blynk.setProperty(V4, "labels", colItems);
 
 	SendStatusToBlynk();
@@ -621,27 +620,7 @@ void SetXmasColors(int grpNr, int colNr)
 		return;
 	}
 
-	String palKey = "";
-	if (colNr == 1)
-	{
-		palKey = "Christmas5";
-	}
-	if (colNr == 2)
-	{
-		palKey = "Christmas6";
-	}
-	if (colNr == 3)
-	{
-		palKey = "Pop";
-	}
-	if (colNr == 4)
-	{
-		palKey = "NightAndDay2";
-	}
-	if (colNr == 5)
-	{
-		palKey = "Christmas7";
-	}
+	String palKey = XmasColorNames[colNr - 1];
 	Serial.print("XmasCol: Changing color palette to '");
 	Serial.print(palKey);
 	Serial.println("'");
