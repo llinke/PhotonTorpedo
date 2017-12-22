@@ -64,8 +64,10 @@ unsigned long updateIntervalFx = AutoChangeIntervalFx * 1000;
 unsigned long lastUpdateCol = 0;
 unsigned long updateIntervalCol = AutoChangeIntervalCol * 1000;
 const int maxFxNr = 5;
+const int startUpFxNr = 2;
 int currFxNr = 0;
 const int maxColNr = 5;
+const int startUpColNr = 1;
 int currColNr = 0;
 int currFps = 25;
 int currGlitter = 32; //48;
@@ -867,8 +869,8 @@ void setup()
 	neoGroup->Start();
 */
 
-	SetXmasEffect(0, 0);
-	SetXmasColors(0, 0);
+	SetXmasEffect(0, startUpFxNr);
+	SetXmasColors(0, startUpColNr);
 	startGroup(0);
 #else
 	Serial.println("Setup: Xmas Tree not active");
