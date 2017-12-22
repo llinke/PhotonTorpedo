@@ -32,7 +32,7 @@
 // Device 'XmasTree FBS43':
 char blynkAuth[] = "4abfe0577ae745aca3d5d5d9f37911b7";
 // Device 'XmasTree EFB':
-// char blynkAuth[] = "7b8bd1934e8b4cf284dfa96471effc3f";
+//char blynkAuth[] = "7b8bd1934e8b4cf284dfa96471effc3f";
 // Device 'XmasTree BNL':
 // char blynkAuth[] = "a43bbc5bd9f04c8cb8b00dbe4add9da8";
 // Device 'XmasTree SB':
@@ -109,7 +109,8 @@ bool InitWifi(bool useWifiCfgTimeout = true, bool forceReconnect = false)
 	delay(2500);
 	//WiFiManager
 	WiFiManager wifiManager;
-	//wifiManager.resetSettings();
+	if (forceReconnect)
+		wifiManager.resetSettings();
 	//wifiManager.setAPStaticIPConfig(IPAddress(10,0,1,1), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
 	//fetches ssid and pass from eeprom and tries to connect
 	//if it does not connect it starts an access point with the specified name
@@ -142,6 +143,9 @@ bool InitWifi(bool useWifiCfgTimeout = true, bool forceReconnect = false)
 
 void InitBlynk()
 {
+	if (WiFi.status() != WL_CONNECTED)
+		return;
+
 	Serial.println("BLYNK -----------------------------------------------------");
 	Serial.println("Blynk: authenticating");
 	Blynk.config(blynkAuth);
@@ -170,6 +174,9 @@ void InitBlynk()
 }
 void SendStatusToBlynk()
 {
+	if (WiFi.status() != WL_CONNECTED)
+		return;
+
 	Serial.println("Blynk: sending current status");
 	Blynk.virtualWrite(V0, ledsStarted);
 	Blynk.virtualWrite(V2, currFxNr + 1);
@@ -953,7 +960,10 @@ void loop()
 		{
 			lastBlynkUpdate = millis();
 			//Serial.println("Loop: Blynk.Run()");
-			Blynk.run();
+			if (WiFi.status() == WL_CONNECTED)
+			{
+				Blynk.run();
+			}
 		}
 #endif
 	}
