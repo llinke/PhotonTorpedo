@@ -18,6 +18,7 @@ enum pattern
 	FADE,
 	WAVE,
 	DYNAMICWAVE,
+	NOISE,
 	RAINBOW,
 	CONFETTI,
 	FIRE
@@ -42,6 +43,7 @@ class NeoGroup
 #define FIRE_SPARKING 120
 #define FADEOUT_DURATION 500
 #define FADEOUT_STEPS 16
+#define MAX_CROSSFADE_PER_STEP 16
 
 	CRGB *LedFirst;
 	int LedOffset = 0;
@@ -89,10 +91,10 @@ class NeoGroup
 		direction direction = FORWARD,
 		mirror mirror = MIRROR0)
 	{
-		Serial.println("Stopping effect execution.");
+		Serial.println("CfgFX: Stopping effect execution.");
 		Stop();
 
-		Serial.println("Configuring effect parameters.");
+		Serial.println("CfgFX: Configuring effect parameters.");
 		ChangeFps(fps);
 		fxStep = 0;
 		fxDirection = direction;
@@ -103,7 +105,7 @@ class NeoGroup
 
 		if (pattern == STATIC)
 		{
-			Serial.print("Setting FX 'Static' for group '");
+			Serial.print("CfgFX: Setting FX 'Static' for group '");
 			Serial.print(GroupID);
 			Serial.println("'.");
 			effectFunc = &NeoGroup::FxStatic;
@@ -111,14 +113,14 @@ class NeoGroup
 		}
 		if (pattern == FADE)
 		{
-			Serial.print("Setting FX 'Fade' for group '");
+			Serial.print("CfgFX: Setting FX 'Fade' for group '");
 			Serial.print(GroupID);
 			Serial.println("'.");
 			effectFunc = &NeoGroup::FxFade;
 		}
 		if (pattern == WAVE)
 		{
-			Serial.print("Setting FX 'Wave' for group '");
+			Serial.print("CfgFX: Setting FX 'Wave' for group '");
 			Serial.print(GroupID);
 			Serial.println("'.");
 			effectFunc = &NeoGroup::FxWave;
@@ -126,15 +128,21 @@ class NeoGroup
 		}
 		if (pattern == DYNAMICWAVE)
 		{
-			Serial.print("Setting FX 'Dynamic Wave' for group '");
+			Serial.print("CfgFX: Setting FX 'Dynamic Wave' for group '");
 			Serial.print(GroupID);
 			Serial.println("'.");
 			effectFunc = &NeoGroup::FxColorWaves;
-			fxLength = (length == 0 ? (LedCount * 2) : length);
+		}
+		if (pattern == NOISE)
+		{
+			Serial.print("CfgFX: Setting FX 'Noise' for group '");
+			Serial.print(GroupID);
+			Serial.println("'.");
+			effectFunc = &NeoGroup::FxNoise;
 		}
 		if (pattern == RAINBOW)
 		{
-			Serial.print("Setting FX 'Rainbow' for group '");
+			Serial.print("CfgFX: Setting FX 'Rainbow' for group '");
 			Serial.print(GroupID);
 			Serial.println("'.");
 			effectFunc = &NeoGroup::FxRainbow;
@@ -142,7 +150,7 @@ class NeoGroup
 		}
 		if (pattern == CONFETTI)
 		{
-			Serial.print("Setting FX 'Confetti' for group '");
+			Serial.print("CfgFX: Setting FX 'Confetti' for group '");
 			Serial.print(GroupID);
 			Serial.println("'.");
 			effectFunc = &NeoGroup::FxConfetti;
@@ -150,7 +158,7 @@ class NeoGroup
 		}
 		if (pattern == FIRE)
 		{
-			Serial.print("Setting FX 'Fire' for group '");
+			Serial.print("CfgFX: Setting FX 'Fire' for group '");
 			Serial.print(GroupID);
 			Serial.println("'.");
 			fill_solid(LedFirst, LedCount, 0x000000);
@@ -165,16 +173,16 @@ class NeoGroup
 		bool clearFirst = true,
 		bool generatePalette = true)
 	{
-		Serial.print("Configuring colors for group '");
+		Serial.print("CfgColor: Configuring colors for group '");
 		Serial.print(GroupID);
 		Serial.println("'.");
 		if (clearFirst)
 		{
-			Serial.println("Clearing old list of colors.");
+			Serial.println("CfgColor: Clearing old list of colors.");
 			currentColors.clear();
 		}
 
-		Serial.println("Adding CRGB colors to internal list.");
+		Serial.println("CfgColor: Adding CRGB colors to internal list.");
 		for (CRGB color : colors)
 		{
 			currentColors.push_back(color);
@@ -182,16 +190,15 @@ class NeoGroup
 
 		if (generatePalette)
 		{
-			if (colors.size() != 0)
+			if (currentColors.size() != 0)
 			{
-				Serial.println("Generating color palette from colors.");
+				Serial.println("CfgColor: Generating color palette from colors.");
 				colorPaletteNew = GenerateRGBPalette(currentColors);
 			}
 			else
 			{
-				Serial.println("No colors, using empty list.");
-				//colorPalette = NULL;
-				colorPaletteNew = CRGBPalette16();
+				Serial.println("CfgColor: No colors, using empty list.");
+				colorPaletteNew = GenerateRGBPalette({});
 			}
 		}
 		return currentColors.size();
@@ -219,7 +226,7 @@ class NeoGroup
 
 	void Start()
 	{
-		Serial.print("Starting group '");
+		Serial.print("GRP: Starting group '");
 		Serial.print(GroupID);
 		Serial.println("'.");
 		Active = true;
@@ -228,7 +235,7 @@ class NeoGroup
 
 	void Stop(bool stopNow = false)
 	{
-		Serial.print("Stopping group '");
+		Serial.print("GRP: Stopping group '");
 		Serial.print(GroupID);
 		Serial.println("'.");
 		Active = false;
@@ -251,6 +258,7 @@ class NeoGroup
 				if (fxFadeOut == 0)
 				{
 					fill_solid(LedFirst, LedCount, 0x000000);
+					colorPalette = GenerateRGBPalette({0x000000, 0x000000});
 				}
 				return true; // LEDs updated
 			}
@@ -268,7 +276,7 @@ class NeoGroup
 			lastUpdate = millis();
 
 			// Cross-fade to new palette
-			nblendPaletteTowardPalette(colorPalette, colorPaletteNew, 16);
+			nblendPaletteTowardPalette(colorPalette, colorPaletteNew, MAX_CROSSFADE_PER_STEP);
 
 			if (effectFunc != NULL)
 			{
@@ -549,9 +557,50 @@ class NeoGroup
 		}
 	}
 
+	void FxNoise()
+	{
+		static uint8_t lastMillis = 0;
+		static uint8_t slowness = 2;
+		static uint32_t noiseYScale = 0;
+
+		uint8_t currentMillis = millis();
+		if (uint8_t(currentMillis - lastMillis) > 8)
+		{
+			lastMillis = currentMillis;
+			//noiseYScale++;
+			noiseYScale += uint16_t(63) << slowness;
+		}
+
+		for (uint16_t i = 0; i < LedCount; i++)
+		{
+			// X location is constant, but we move along the Y at the rate of millis()
+			//uint8_t index = inoise8(uint16_t(i) * 20, noiseYScale);
+			//leds[i] = ColorFromPalette(palette, index);
+			int16_t index = inoise16(uint32_t(i) << 12, noiseYScale);
+			/*
+			uint8_t hi4 = (index >> 12) & 0xFF; // take the highest 4 bits
+			uint8_t lo8 = (index >> 4) & 0xFF;  // take the next-to-highest 8 bits, ignore the lowest 4 bits
+			uint8_t index8 = (hi4 << 4) | (lo8 & 0x0F);
+			*/
+			//leds[i] = ColorFromPalette16(palette, index);
+			uint16_t pixelnumber = i;
+			pixelnumber = (LedCount - 1) - pixelnumber;
+			/*
+			Serial.print("FX: Getting color from palette for pixel ");
+			Serial.print(pixelnumber);
+			Serial.print(" at index16 ");
+			Serial.print(index, HEX);
+			Serial.print(" as index8 ");
+			Serial.println(index8, HEX);
+			*/
+			CRGB newcolor = ColorFromPalette16(colorPalette, index);
+			SetPixel(pixelnumber, newcolor, fxMirror);
+		}
+	}
+
 	static CRGBPalette16 GenerateRGBPalette(std::vector<CRGB> colors)
 	{
-		CRGB nc[16];
+		CRGB nc[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 		int colCount = colors.size();
 		for (int c = 0; c < colCount; c++)
 		{
@@ -568,5 +617,103 @@ class NeoGroup
 		return CRGBPalette16(
 			nc[0], nc[1], nc[2], nc[3], nc[4], nc[5], nc[6], nc[7],
 			nc[8], nc[9], nc[10], nc[11], nc[12], nc[13], nc[14], nc[15]);
+	}
+
+	// Copied from:
+	// https://github.com/FastLED/FastLED/blob/master/colorutils.cpp
+	// Modified to have a 16-bit index, for more precise colors (though only
+	// 12 bits are actually used).
+	static CRGB ColorFromPalette16(const CRGBPalette16 &pal, uint16_t index, uint8_t brightness = 0xff, TBlendType blendType = LINEARBLEND)
+	{
+		uint8_t hi4 = index >> 12; // take the highest 4 bits
+		uint8_t lo8 = index >> 4;  // take the next-to-highest 8 bits, ignore the lowest 4 bits
+
+		// const CRGB* entry = &(pal[0]) + hi4;
+		// since hi4 is always 0..15, hi4 * sizeof(CRGB) can be a single-byte value,
+		// instead of the two byte 'int' that avr-gcc defaults to.
+		// So, we multiply hi4 X sizeof(CRGB), giving hi4XsizeofCRGB;
+		uint8_t hi4XsizeofCRGB = hi4 * sizeof(CRGB);
+		// We then add that to a base array pointer.
+		const CRGB *entry = (CRGB *)((uint8_t *)(&(pal[0])) + hi4XsizeofCRGB);
+
+		uint8_t blend = lo8 && (blendType != NOBLEND);
+
+		uint8_t red1 = entry->red;
+		uint8_t green1 = entry->green;
+		uint8_t blue1 = entry->blue;
+
+		if (blend)
+		{
+
+			if (hi4 == 15)
+			{
+				entry = &(pal[0]);
+			}
+			else
+			{
+				entry++;
+			}
+
+			uint8_t f2 = lo8;
+			uint8_t f1 = 255 - f2;
+
+			//    rgb1.nscale8(f1);
+			uint8_t red2 = entry->red;
+			red1 = scale8_LEAVING_R1_DIRTY(red1, f1);
+			red2 = scale8_LEAVING_R1_DIRTY(red2, f2);
+			red1 += red2;
+
+			uint8_t green2 = entry->green;
+			green1 = scale8_LEAVING_R1_DIRTY(green1, f1);
+			green2 = scale8_LEAVING_R1_DIRTY(green2, f2);
+			green1 += green2;
+
+			uint8_t blue2 = entry->blue;
+			blue1 = scale8_LEAVING_R1_DIRTY(blue1, f1);
+			blue2 = scale8_LEAVING_R1_DIRTY(blue2, f2);
+			blue1 += blue2;
+
+			cleanup_R1();
+		}
+
+		if (brightness != 255)
+		{
+			if (brightness)
+			{
+				brightness++; // adjust for rounding
+				// Now, since brightness is nonzero, we don't need the full scale8_video logic;
+				// we can just to scale8 and then add one (unless scale8 fixed) to all nonzero inputs.
+				if (red1)
+				{
+					red1 = scale8_LEAVING_R1_DIRTY(red1, brightness);
+#if !(FASTLED_SCALE8_FIXED == 1)
+					red1++;
+#endif
+				}
+				if (green1)
+				{
+					green1 = scale8_LEAVING_R1_DIRTY(green1, brightness);
+#if !(FASTLED_SCALE8_FIXED == 1)
+					green1++;
+#endif
+				}
+				if (blue1)
+				{
+					blue1 = scale8_LEAVING_R1_DIRTY(blue1, brightness);
+#if !(FASTLED_SCALE8_FIXED == 1)
+					blue1++;
+#endif
+				}
+				cleanup_R1();
+			}
+			else
+			{
+				red1 = 0;
+				green1 = 0;
+				blue1 = 0;
+			}
+		}
+
+		return CRGB(red1, green1, blue1);
 	}
 };

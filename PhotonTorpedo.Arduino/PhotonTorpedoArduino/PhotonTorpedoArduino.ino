@@ -63,12 +63,12 @@ unsigned long lastUpdateFx = 0;
 unsigned long updateIntervalFx = AutoChangeIntervalFx * 1000;
 unsigned long lastUpdateCol = 0;
 unsigned long updateIntervalCol = AutoChangeIntervalCol * 1000;
+const int maxFxNr = 5;
 int currFxNr = 0;
-const int maxFxNr = 4;
+const int maxColNr = 5;
 int currColNr = 0;
 int currFps = 25;
 int currGlitter = 32; //48;
-const int maxColNr = 5;
 #endif
 
 //std::vector<NeoGroup *> neoGroups;
@@ -149,6 +149,7 @@ void InitBlynk()
 	BlynkParamAllocated fxItems(128);
 	fxItems.add("Zufällig");
 	fxItems.add("Dynamisch");
+	fxItems.add("Plasma");
 	fxItems.add("Welle");
 	fxItems.add("Konfetti");
 	fxItems.add("Farbwechsel");
@@ -441,6 +442,8 @@ int setEffectParticle(String args)
 		fxPattern = pattern::WAVE;
 	if (fxName == "dynwave")
 		fxPattern = pattern::DYNAMICWAVE;
+	if (fxName == "noise")
+		fxPattern = pattern::NOISE;
 	if (fxName == "rainbow")
 		fxPattern = pattern::RAINBOW;
 	if (fxName == "confetti")
@@ -556,30 +559,38 @@ void SetXmasEffect(int grpNr, int fxNr, bool startFx = false)
 	uint8_t fxFps = currFps;
 	mirror fxMirror = MIRROR0;
 
-	if (fxNr == 1) // Dynamic Wave
+	switch (fxNr)
 	{
+	case 1: // Dynamic Wave
 		fxPatternName = "Dynamic Wave";
 		fxPattern = pattern::DYNAMICWAVE;
-		fxLength = (pixelCount * 1.5); // 48;
-		fxMirror = mirror::MIRROR1;	// mirror::MIRROR0;
-	}
-	if (fxNr == 2) // Wave
-	{
+		fxMirror = mirror::MIRROR1; // mirror::MIRROR0;
+		break;
+	case 2: // Noise
+		fxPatternName = "Noise";
+		fxPattern = pattern::NOISE;
+		fxMirror = mirror::MIRROR1; // mirror::MIRROR0;
+		break;
+	case 3: // Wave
 		fxPatternName = "Wave";
 		fxPattern = pattern::WAVE;
 		fxLength = (pixelCount * 1.5); // 48;
 		fxMirror = mirror::MIRROR2;
-	}
-	if (fxNr == 3) // confetti
-	{
+		break;
+	case 4: // confetti
 		fxPatternName = "Confetti";
 		fxPattern = pattern::CONFETTI;
 		fxGlitter = 0;
-	}
-	if (fxNr == 4) // Fade
-	{
+		break;
+	case 5: // Fade
 		fxPatternName = "Fade";
 		fxPattern = pattern::FADE;
+		break;
+	default:
+		fxPatternName = "Static";
+		fxPattern = pattern::STATIC;
+		fxMirror = mirror::MIRROR0;
+		break;
 	}
 	Serial.print("XmasFx: Changing effect to '");
 	Serial.print(fxPatternName);
@@ -899,16 +910,19 @@ void loop()
 	bothButtonsPressed = btn1Pressed & btn2Pressed;
 
 	if (!ledsStarted)
+	{
+		//Serial.println("Loop: LEDs not started, leaving loop.");
 		return;
+	}
 
 #ifdef INCLUDE_XMAS_DEMO
 	bool fxChanged = false;
 	if ((millis() - lastUpdateFx) > updateIntervalFx)
 	{
 		lastUpdateFx = millis();
-		Serial.println("Loop: time to change Xmas FX.");
 		if (currFxNr == 0)
 		{
+			Serial.println("Loop: time to randomly change Xmas FX.");
 			SetXmasEffect(0, 0);
 			fxChanged = true;
 		}
@@ -916,9 +930,9 @@ void loop()
 	if ((millis() - lastUpdateCol) > updateIntervalCol)
 	{
 		lastUpdateCol = millis();
-		Serial.println("Loop: time to change Xmas Colors.");
 		if (currColNr == 0)
 		{
+			Serial.println("Loop: time to randomly change Xmas Colors.");
 			SetXmasColors(0, 0);
 		}
 	}
@@ -935,6 +949,8 @@ void loop()
 		NeoGroup *neoGroup = &(neoGroups.at(i));
 		if (neoGroup->LedCount <= pixelCount)
 		{
+			//Serial.print("Loop: Updating group ");
+			//Serial.println(i);
 			ledsUpdated |= neoGroup->Update();
 		}
 
@@ -945,7 +961,7 @@ void loop()
 	}
 	if (ledsUpdated)
 	{
-		//Serial.print("Loop: Refreshing LEDs.");
+		//Serial.println("Loop: Refreshing LEDs.");
 		FastLED.show();
 	}
 	else
