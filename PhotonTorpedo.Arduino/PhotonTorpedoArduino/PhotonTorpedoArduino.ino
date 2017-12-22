@@ -30,15 +30,20 @@
 #include <BlynkSimpleEsp8266.h>
 
 // Device 'XmasTree FBS43':
-char blynkAuth[] = "4abfe0577ae745aca3d5d5d9f37911b7";
+const char blynkAuth[] = "4abfe0577ae745aca3d5d5d9f37911b7";
+const String wifiApName = "AP_XmasTreeFBS43";
 // Device 'XmasTree EFB':
-//char blynkAuth[] = "7b8bd1934e8b4cf284dfa96471effc3f";
+// const char blynkAuth[] = "7b8bd1934e8b4cf284dfa96471effc3f";
+// const String wifiApName = "AP_XmasTreeEFB";
 // Device 'XmasTree BNL':
-// char blynkAuth[] = "a43bbc5bd9f04c8cb8b00dbe4add9da8";
+// const char blynkAuth[] = "a43bbc5bd9f04c8cb8b00dbe4add9da8";
+// const String wifiApName = "AP_XmasTreeBNL";
 // Device 'XmasTree SB':
-// char blynkAuth[] = "fd6d6a43b6b4474aa708261839a736a9";
+// const char blynkAuth[] = "fd6d6a43b6b4474aa708261839a736a9";
+// const String wifiApName = "AP_XmasTreeSB";
 // Device 'XmasTree JL':
-// char blynkAuth[] = "a652e6db9a0d435986feeb6866896e85";
+// const char blynkAuth[] = "a652e6db9a0d435986feeb6866896e85";
+// const String wifiApName = "AP_XmasTreeJL";
 
 //SYSTEM_MODE(AUTOMATIC);
 
@@ -56,6 +61,7 @@ const int AutoChangeIntervalCol = 20;
 // Dynamic size:
 struct CRGB *leds = NULL;
 int pixelCount = PIXEL_COUNT;
+int pixelOffset = PIXEL_OFFSET;
 bool ledsInitialized = false;
 bool ledsStarted = false;
 #ifdef INCLUDE_XMAS_DEMO
@@ -123,7 +129,7 @@ bool InitWifi(bool useWifiCfgTimeout = true, bool forceReconnect = false)
 		Serial.println(" seconds for configuration if required.");
 		wifiManager.setConfigPortalTimeout(ConfigureAPTimeout);
 	}
-	bool connected = wifiManager.autoConnect("XmasTreeAP");
+	bool connected = wifiManager.autoConnect(wifiApName);
 	//or use this for auto generated name ESP + ChipID
 	//wifiManager.autoConnect();
 	//if you get here you have connected to the WiFi
@@ -238,10 +244,9 @@ int initStrip(int ledCount, bool doStart = false, bool playDemo = true)
 	}
 
 	Serial.println("Adding group 0 spanning all LEDs.");
-	int offset = 4;
 	neoGroups.clear();
 	// Group 0: all LEDs
-	addGroup("All LEDs", 0, pixelCount, offset);
+	addGroup("All LEDs", 0, pixelCount, pixelOffset);
 
 	// Right Wing
 	//addGroup("Right Wing", 0, 9);
@@ -826,7 +831,7 @@ void setup()
 	Serial.println("BOOT/SETUP ------------------------------------------------");
 	Serial.println("Setup: Setting up Xmas Tree for Arduino");
 	Serial.println("Setup: Initializing LED strip");
-	initStrip(32, true, true);
+	initStrip(pixelCount, true, true);
 	Serial.print("Setup: Amount of LEDs: ");
 	Serial.println(pixelCount);
 

@@ -10,8 +10,14 @@ FASTLED_USING_NAMESPACE
 
 //#define PIXEL_PIN D2
 #define PIXEL_PIN D1
+
 #define PIXEL_COUNT 32
-//#define PIXEL_COUNT 48
+#define PIXEL_OFFSET 4
+/*
+#define PIXEL_COUNT 21
+#define PIXEL_OFFSET 3
+*/
+
 #define PIXEL_TYPE NEOPIXEL
 #define BUTTON_PIN_1 D5
 #define BUTTON_PIN_2 D6
