@@ -70,11 +70,14 @@ unsigned long updateIntervalFx = AutoChangeIntervalFx * 1000;
 unsigned long lastUpdateCol = 0;
 unsigned long updateIntervalCol = AutoChangeIntervalCol * 1000;
 const int maxFxNr = 5;
+// 1: Wave, 2: Dynamic Wave, 3: Noise, 4: confetti, 5: Fade,
+const int defaultFxNr = 0;
 const int startUpFxNr = 2;
-int currFxNr = 0;
-const int maxColNr = 5;
+int currFxNr = defaultFxNr;
+int maxColNr = 5;
+const int defaultColNr = 0;
 const int startUpColNr = 1;
-int currColNr = 0;
+int currColNr = defaultColNr;
 int currFps = 25;
 int currGlitter = 32; //48;
 #endif
@@ -116,7 +119,9 @@ bool InitWifi(bool useWifiCfgTimeout = true, bool forceReconnect = false)
 	//WiFiManager
 	WiFiManager wifiManager;
 	if (forceReconnect)
+	{
 		wifiManager.resetSettings();
+	}
 	//wifiManager.setAPStaticIPConfig(IPAddress(10,0,1,1), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
 	//fetches ssid and pass from eeprom and tries to connect
 	//if it does not connect it starts an access point with the specified name
@@ -129,7 +134,7 @@ bool InitWifi(bool useWifiCfgTimeout = true, bool forceReconnect = false)
 		Serial.println(" seconds for configuration if required.");
 		wifiManager.setConfigPortalTimeout(ConfigureAPTimeout);
 	}
-	bool connected = wifiManager.autoConnect(wifiApName);
+	bool connected = wifiManager.autoConnect(wifiApName.c_str());
 	//or use this for auto generated name ESP + ChipID
 	//wifiManager.autoConnect();
 	//if you get here you have connected to the WiFi
@@ -157,17 +162,26 @@ void InitBlynk()
 	Blynk.config(blynkAuth);
 	Blynk.connect();
 
-	Serial.println("Blynk: assigning dropdown 'FX'");
+	SendMenusToBlynk();
+	SendStatusToBlynk();
+}
+
+void SendMenusToBlynk()
+{
+	if (WiFi.status() != WL_CONNECTED)
+		return;
+
+	Serial.println("Blynk: assigning menu 'FX'");
 	BlynkParamAllocated fxItems(128);
 	fxItems.add("Zufällig");
+	fxItems.add("Lauflicht");
 	fxItems.add("Dynamisch");
-	fxItems.add("Plasma");
-	fxItems.add("Welle");
+	fxItems.add("Wasser");
 	fxItems.add("Konfetti");
 	fxItems.add("Farbwechsel");
 	Blynk.setProperty(V2, "labels", fxItems);
 
-	Serial.println("Blynk: assigning dropdown 'Colors'");
+	Serial.println("Blynk: assigning menu 'Colors'");
 	BlynkParamAllocated colItems(128);
 	colItems.add("Zufällig");
 	for (int i = 0; i < XmasColorNames.size(); i++)
@@ -175,9 +189,8 @@ void InitBlynk()
 		colItems.add(XmasColorNames[i]);
 	}
 	Blynk.setProperty(V4, "labels", colItems);
-
-	SendStatusToBlynk();
 }
+
 void SendStatusToBlynk()
 {
 	if (WiFi.status() != WL_CONNECTED)
@@ -574,21 +587,21 @@ void SetXmasEffect(int grpNr, int fxNr, bool startFx = false)
 
 	switch (fxNr)
 	{
-	case 1: // Dynamic Wave
-		fxPatternName = "Dynamic Wave";
-		fxPattern = pattern::DYNAMICWAVE;
-		fxMirror = mirror::MIRROR1; // mirror::MIRROR0;
-		break;
-	case 2: // Noise
-		fxPatternName = "Noise";
-		fxPattern = pattern::NOISE;
-		fxMirror = mirror::MIRROR1; // mirror::MIRROR0;
-		break;
-	case 3: // Wave
+	case 1: // Wave
 		fxPatternName = "Wave";
 		fxPattern = pattern::WAVE;
 		fxLength = (pixelCount * 1.5); // 48;
 		fxMirror = mirror::MIRROR2;
+		break;
+	case 2: // Dynamic Wave
+		fxPatternName = "Dynamic Wave";
+		fxPattern = pattern::DYNAMICWAVE;
+		fxMirror = mirror::MIRROR1; // mirror::MIRROR0;
+		break;
+	case 3: // Noise
+		fxPatternName = "Noise";
+		fxPattern = pattern::NOISE;
+		fxMirror = mirror::MIRROR1; // mirror::MIRROR0;
 		break;
 	case 4: // confetti
 		fxPatternName = "Confetti";
@@ -806,6 +819,7 @@ BLYNK_WRITE(V7) // Slider "Speed"
 }
 BLYNK_APP_CONNECTED()
 {
+	SendMenusToBlynk();
 	SendStatusToBlynk();
 	//Blynk.syncAll();
 }
@@ -817,6 +831,8 @@ void setup()
 #endif
 
 	Serial.begin(115200);
+
+	maxColNr = XmasColorNames.size();
 
 	pinMode(BUTTON_PIN_1, INPUT_PULLUP);
 	pinMode(BUTTON_PIN_2, INPUT_PULLUP);
@@ -863,6 +879,10 @@ void setup()
 	SetXmasEffect(0, startUpFxNr);
 	SetXmasColors(0, startUpColNr);
 	startGroup(0);
+
+	// Prevent immediate random change of FX and colors
+	lastUpdateFx = millis();
+	lastUpdateCol = millis();
 #else
 	Serial.println("Setup: Xmas Tree not active");
 #endif
@@ -896,6 +916,16 @@ void loop()
 		{
 			Serial.println("Loop: button 'colors' pressed and releases.");
 			NextXmasColor();
+			// Visual feedback button was pressed
+			for (int p = 0; p < 3; p++)
+			{
+				FastLED.setBrightness(0);
+				FastLED.show();
+				FastLED.delay(100);
+				FastLED.setBrightness(globalBrightness);
+				FastLED.show();
+				FastLED.delay(100);
+			}
 		}
 	}
 	button1Pressed = btn1Pressed;

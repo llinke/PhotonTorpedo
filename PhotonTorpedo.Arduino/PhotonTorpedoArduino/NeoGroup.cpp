@@ -11,6 +11,14 @@
 #include <vector>
 //#include <map>
 
+#define FIRE_COOLING 55
+#define FIRE_SPARKING 120
+
+#define FADEOUT_DURATION 500
+#define FADEOUT_STEPS 16
+#define CROSSFADE_PALETTES
+#define CROSSFADE_MAX_CHANGE_PER_STEP 16
+
 enum pattern
 {
 	NOFX,
@@ -39,12 +47,6 @@ enum mirror
 
 class NeoGroup
 {
-#define FIRE_COOLING 55
-#define FIRE_SPARKING 120
-#define FADEOUT_DURATION 500
-#define FADEOUT_STEPS 16
-#define MAX_CROSSFADE_PER_STEP 16
-
 	CRGB *LedFirst;
 	int LedOffset = 0;
 
@@ -61,7 +63,9 @@ class NeoGroup
 	//std::vector<CRGB> currentColors = {};
 	std::vector<CRGB> currentColors = {0x000000, 0x000000};
 	CRGBPalette16 colorPalette = CRGBPalette16();
+#ifdef CROSSFADE_PALETTES
 	CRGBPalette16 colorPaletteNew = CRGBPalette16();
+#endif
 	uint8_t firePaletteNr = 6;
 
 	void (NeoGroup::*effectFunc)();
@@ -182,7 +186,9 @@ class NeoGroup
 			currentColors.clear();
 		}
 
-		Serial.println("CfgColor: Adding CRGB colors to internal list.");
+		Serial.print("CfgColor: Adding ");
+		Serial.print(colors.size());
+		Serial.println(" CRGB colors to internal list.");
 		for (CRGB color : colors)
 		{
 			currentColors.push_back(color);
@@ -192,13 +198,23 @@ class NeoGroup
 		{
 			if (currentColors.size() != 0)
 			{
-				Serial.println("CfgColor: Generating color palette from colors.");
+				Serial.print("CfgColor: Generating color palette from ");
+				Serial.print(currentColors.size());
+				Serial.println(" CRGB colors.");
+#ifdef CROSSFADE_PALETTES
 				colorPaletteNew = GenerateRGBPalette(currentColors);
+#else
+				colorPalette = GenerateRGBPalette(currentColors);
+#endif
 			}
 			else
 			{
 				Serial.println("CfgColor: No colors, using empty list.");
+#ifdef CROSSFADE_PALETTES
 				colorPaletteNew = GenerateRGBPalette({});
+#else
+				colorPalette = GenerateRGBPalette({});
+#endif
 			}
 		}
 		return currentColors.size();
@@ -252,13 +268,22 @@ class NeoGroup
 		{
 			if ((millis() - lastUpdate) > (FADEOUT_DURATION / FADEOUT_STEPS))
 			{
+				/*
+				Serial.print("GRP: Fading out group '");
+				Serial.print(GroupID);
+				Serial.println("', ");
+				Serial.print(fxFadeOut);
+				Serial.println(" steps remaing.");
+				*/
 				lastUpdate = millis();
 				fadeToBlackBy(LedFirst, LedCount, (1024 / FADEOUT_STEPS));
 				fxFadeOut--;
 				if (fxFadeOut == 0)
 				{
 					fill_solid(LedFirst, LedCount, 0x000000);
+#ifdef CROSSFADE_PALETTES
 					colorPalette = GenerateRGBPalette({0x000000, 0x000000});
+#endif
 				}
 				return true; // LEDs updated
 			}
@@ -267,17 +292,27 @@ class NeoGroup
 
 		if (!Active)
 		{
+			/*
+			Serial.print("GRP: SKIPPED update for '");
+			Serial.print(GroupID);
+			Serial.println("', not active.");
+			*/
 			return false; // LEDs not updated
 		}
 
 		int updateInterval = (1000 / fxFps);
 		if ((millis() - lastUpdate) > updateInterval)
 		{
+			/*
+			Serial.print("GRP: Updating group '");
+			Serial.print(GroupID);
+			Serial.println("'.");
+			*/
 			lastUpdate = millis();
-
+#ifdef CROSSFADE_PALETTES
 			// Cross-fade to new palette
-			nblendPaletteTowardPalette(colorPalette, colorPaletteNew, MAX_CROSSFADE_PER_STEP);
-
+			nblendPaletteTowardPalette(colorPalette, colorPaletteNew, CROSSFADE_MAX_CHANGE_PER_STEP);
+#endif
 			if (effectFunc != NULL)
 			{
 				(this->*effectFunc)();
@@ -286,6 +321,15 @@ class NeoGroup
 				{
 					FxGlitter(fxAmountGlitter);
 				}
+			}
+			else
+			{
+				/*
+				Serial.print("GRP: ERROR, no FX function set for group '");
+				Serial.print(GroupID);
+				Serial.println("'.");
+				*/
+				return false;
 			}
 			return true; // LEDs updated
 		}
